@@ -69,6 +69,7 @@
    - [Wordlists](#wordlists)
      - [Common Wordlists](#common-wordlists)
      - [Cewl](#cewl)
+     - [Rules](#rules)
    - [XSS](#xss)
    - [LFI](#lfi)
    - [RFI](#rfi)
@@ -3429,4 +3430,101 @@ When testing for IDOR, consider the following:
 ---
 
 ## Wordlists
+
+**Some Useful Generators**
+
+| Tool                           | GitHub URL                                                          |
+|--------------------------------|---------------------------------------------------------------------|
+| bopscrk                        | [https://github.com/R3nt0n/bopscrk](https://github.com/R3nt0n/bopscrk) |
+| COOK                            | [https://github.com/giteshnxtlvl/cook](https://github.com/giteshnxtlvl/cook) |
+| CUPP                            | [https://github.com/Mebus/cupp](https://github.com/Mebus/cupp)       |
+| Kerberos Username Enumeration  | [https://github.com/attackdebris/kerberos_enum_userlists](https://github.com/attackdebris/kerberos_enum_userlists) |
+| Username Anarchy               | [https://github.com/urbanadventurer/username-anarchy](https://github.com/urbanadventurer/username-anarchy) |
+
+**Useful Wordlists**
+
+- `/usr/share/wordlists/seclists/Discovery/DNS/combined_subdomains.txt`
+- `/usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt`
+- `/usr/share/wordlists/dirbuster/directory-list-lowercase-2.3-medium.txt`
+- `/usr/share/seclists/Discovery/Web-Content/common.txt`
+- `/usr/share/seclists/Discovery/Web-Content/big.txt`
+- `/usr/share/seclists/Discovery/DNS/bitquark-subdomains-top100000.txt`
+- `/usr/share/wordlists/seclists/Discovery/Web-Content/raft-large-files.txt`
+- `/usr/share/wordlists/wfuzz/general/big.txt`
+
+## Cewl
+
+- To spider a site and write all found words to a file
+> ```bash
+> cewl -w <file> <url>
+> ```
+
+- To spider a site and follow links to other sites
+> ```bash
+> cewl -o <url>
+> ```
+
+- To spider a site using a given user-agent 
+> ```bash
+> cewl -u <user-agent> <url>
+> ```
+
+- To spider a site for a given depth and minimum word length
+> ```bash
+> cewl -d <depth> -m <min word length> <url>
+> ```
+
+- To spider a site and include a count for each word
+> ```bash
+> cewl -c <url>
+> ```
+
+- To spider a site inluding meta data and separate the meta_data words
+> ```bash
+> cewl -a -meta_file <file> <url>
+> ```
+
+- To spider a site and store email adresses in a separate file
+> ```bash
+> cewl -e -email_file <file> <url>
+> ```
+
+## Rules
+
+Common Rule Examples:
+
+$1: Appends "1" to the end of the word.
+
+Example: "password" → "password1"
+
+^: Prepends "1" to the word.
+
+Example: "password" → "1password"
+
+c: Capitalizes the first character of the word.
+
+Example: "password" → "Password"
+
+r: Reverses the word.
+
+Example: "password" → "drowssap"
+
+l: Converts the word to lowercase (if it’s not already).
+
+Example: "PASSWORD" → "password"
+
+^c: Capitalize the first letter and append "123".
+
+Example: "admin" → "Admin123"
+
+**Common Rules to use**
+
+- best66.rule
+- dive.rule
+- toggles5.rule
+- [OneRuleToRuleThemAll](https://github.com/NotSoSecure/password_cracking_rules/blob/master/OneRuleToRuleThemAll.rule)
+
+---
+
+## XSS
 
