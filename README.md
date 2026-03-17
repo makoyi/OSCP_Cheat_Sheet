@@ -122,16 +122,7 @@
     - [SSH](#ssh)
     - [Ligolo-ng](#ligolo-ng) 
 19. [Various Tools](#various-tools)
-    - [Mimikatz](#mimikatz)
-    - [PowerView](#powerview)
-    - [PowerUp](#powerup)
-    - [FullPowers](#fullpowers)
-    - [PowerMad](#powermad)
-    - [Rubeus](#rubeus)
-    - [Impacket](#impacket)
-    - [Potatoes](#potatoes)
-    - [PrintSpoofer](#printspoofer)
-    - [Snaffler](#snaffler)
+   
 
 
 ## Reconaissance
@@ -7431,3 +7422,43 @@ Start the attacker
 - Reference 
 - https://www.youtube.com/watch?v=DM1B8S80EvQ&t=90s
 - https://arth0s.medium.com/ligolo-ng-pivoting-reverse-shells-and-file-transfers-6bfb54593fa5
+
+---
+
+## Various Tools
+
+| Software                  | URL                                                                                       |
+|---------------------------|-------------------------------------------------------------------------------------------|
+| adPEAS                    | [https://github.com/ajm4n/adPEAS](https://github.com/ajm4n/adPEAS)                        |
+| certify                   | [https://github.com/GhostPack/Certify](https://github.com/GhostPack/Certify)              |
+| certipy                   | [https://github.com/ly4k/Certipy](https://github.com/ly4k/Certipy)                        |
+| chisel                    | [https://github.com/jpillora/chisel/releases](https://github.com/jpillora/chisel/releases) |
+| Dirtyc0W                  | [https://dirtycow.ninja/](https://dirtycow.ninja/)                                         |
+| Get-SPNS                  | [https://github.com/compwiz32/PowerShell/blob/master/Get-SPN.ps1](https://github.com/compwiz32/PowerShell/blob/master/Get-SPN.ps1) |
+| git-dumper                | [https://github.com/arthaud/git-dumper](https://github.com/arthaud/git-dumper)            |
+| gtfobins                  | [https://gtfobins.org/](https://gtfobins.org/)                                             |
+| kerbrute                  | [https://github.com/ropnop/kerbrute](https://github.com/ropnop/kerbrute)                  |
+| lapsdumper                | [https://github.com/n00py/LAPSDumper](https://github.com/n00py/LAPSDumper)                |
+| ligolo                    | [https://github.com/nicocha30/ligolo-ng/releases](https://github.com/nicocha30/ligolo-ng/releases) |
+| mimikatz.exe              | [https://github.com/gentilkiwi/mimikatz](https://github.com/gentilkiwi/mimikatz)          |
+| nuclei                    | [https://github.com/projectdiscovery/nuclei](https://github.com/projectdiscovery/nuclei)  |
+| ntlm_theft                | [https://github.com/Greenwolf/ntlm_theft](https://github.com/Greenwolf/ntlm_theft)        |
+| PayloadsAllTheThings      | [https://github.com/swisskyrepo/PayloadsAllTheThings](https://github.com/swisskyrepo/PayloadsAllTheThings) |
+| PowerMad                  | [https://github.com/Kevin-Robertson/Powermad](https://github.com/Kevin-Robertson/Powermad) |
+| PowerUp.ps1               | [https://github.com/PowerShellMafia/PowerSploit/blob/master/Privesc/PowerUp.ps1](https://github.com/PowerShellMafia/PowerSploit/blob/master/Privesc/PowerUp.ps1) |
+| PowerView                 | [https://github.com/PowerShellMafia/PowerSploit/blob/master/Recon/PowerView.ps1](https://github.com/PowerShellMafia/PowerSploit/blob/master/Recon/PowerView.ps1) |
+| powercat                  | [https://github.com/besimorhino/powercat](https://github.com/besimorhino/powercat)        |
+| pywhisker                 | [https://github.com/ShutdownRepo/pywhisker](https://github.com/ShutdownRepo/pywhisker)    |
+| pylaps                    | [https://github.com/p0dalirius/pyLAPS/tree/main](https://github.com/p0dalirius/pyLAPS/tree/main) |
+| PrintSpoofer              | [https://github.com/itm4n/PrintSpoofer/releases](https://github.com/itm4n/PrintSpoofer/releases) |
+| rubeus                    | [https://github.com/GhostPack/Rubeus/releases](https://github.com/GhostPack/Rubeus/releases) |
+| seatbelt                  | [https://github.com/GhostPack/Seatbelt](https://github.com/GhostPack/Seatbelt)            |
+| SharpGPOAbuse             | [https://github.com/FSecureLABS/SharpGPOAbuse](https://github.com/FSecureLABS/SharpGPOAbuse) |
+| SharpUp.exe               | [https://github.com/r3motecontrol/Ghostpack-CompiledBinaries](https://github.com/r3motecontrol/Ghostpack-CompiledBinaries) |
+| Snaffler                  | [https://github.com/SnaffCon/Snaffler](https://github.com/SnaffCon/Snaffler)              |
+| suid3num.py               | [https://github.com/Anon-Exploiter/SUID3NUM](https://github.com/Anon-Exploiter/SUID3NUM)  |
+| targetedKerberoast        | [https://github.com/ShutdownRepo/targetedKerberoast](https://github.com/ShutdownRepo/targetedKerberoast) |
+| windapsearch              | [https://github.com/ropnop/windapsearch](https://github.com/ropnop/windapsearch)          |
+| PSTools                   | [https://learn.microsoft.com/en-us/sysinternals/downloads/pstools](https://learn.microsoft.com/en-us/sysinternals/downloads/pstools) |
+| revshells                 | [https://www.revshells.com/](https://www.revshells.com/)                                   |
+| firefox decrypt           | [https://github.com/unode/firefox_decrypt](https://github.com/unode/firefox_decrypt)      |
