@@ -1,3 +1,5 @@
+# Usage: __wget http://<LHOST>/<FILE>
+
 function __wget() {
     : ${DEBUG:=0}
     local URL=$1
