@@ -7377,7 +7377,7 @@ It is useful when we want to access to the host & multiple ports that cannot be 
 > ```bash
 > sudo ip tuntap add user [username] mode tun ligolo
 > sudo ip link set ligolo up
-> ip addr show ligolo
+> sudo ip addr show ligolo
 > ```
 
 2. Start the proxy
