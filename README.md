@@ -7429,5 +7429,5 @@ Start the attacker
 ****When using proxy, don't forget to use the IP address from the interface of the pivot machine.
 
 - Reference 
-https://www.youtube.com/watch?v=DM1B8S80EvQ&t=90s
-https://arth0s.medium.com/ligolo-ng-pivoting-reverse-shells-and-file-transfers-6bfb54593fa5
+- https://www.youtube.com/watch?v=DM1B8S80EvQ&t=90s
+- https://arth0s.medium.com/ligolo-ng-pivoting-reverse-shells-and-file-transfers-6bfb54593fa5
